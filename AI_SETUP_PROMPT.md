@@ -26,12 +26,25 @@ Rules for this session:
 - If a command fails, show me the actual error output. Do not guess at a cause
   or paper over it.
 
-PHASE 1 - Environment
-Run ./scripts/verify-setup.sh and show me the result. It checks Node, git, the
-MCP config, the 20 skills, the hooks, and the toolkit, all offline. Fix
-anything it flags that is fixable without my input (missing executable bits,
-missing .env copied from .env.example, git init). Report anything that needs a
-decision from me instead of deciding for me.
+PHASE 1 - Environment and the engine
+This harness is built around n8n-mcp (https://github.com/czlonkowski/n8n-mcp),
+pinned in package.json. It is what supplies real node schemas, validators, and
+templates instead of your training data, so nothing else matters until it runs.
+
+First confirm it is installed and matches the pin. If node_modules/n8n-mcp is
+absent, run `npm ci` (it is ~100 MB because it carries a prebuilt node
+database; if vendor/npm-cache exists, use `npm ci --offline --cache
+vendor/npm-cache`).
+
+Then run `npm run smoke` and show me the output. Expect 7 tools with no
+credentials. If it fails, stop and show me the error: everything downstream
+depends on this.
+
+Then run ./scripts/verify-setup.sh and show me the result. It checks Node, git,
+the MCP config, the n8n-mcp pin and its node database, the 20 skills, the hooks,
+and the toolkit. Fix anything it flags that is fixable without my input (missing
+executable bits, missing .env copied from .env.example, git init). Report
+anything that needs a decision from me instead of deciding for me.
 
 PHASE 2 - Credentials
 Check whether .env exists and whether N8N_API_URL and N8N_API_KEY are exported
@@ -45,7 +58,12 @@ in this shell. Do not read the key's value.
 - Then STOP and wait for me. Do not continue to Phase 3 without credentials.
 
 PHASE 3 - MCP servers
-Confirm both servers from .mcp.json are connected. Two servers, one package:
+Re-run `npm run smoke` now that credentials are exported. It must report 25
+tools (7 documentation plus 18 instance). If it still reports 7, the environment
+did not reach the server process: tell me, and do not proceed.
+
+Then confirm both servers from .mcp.json are connected. Two servers, one
+package, both running the pinned n8n-mcp via scripts/mcp-server.mjs:
 - n8n-docs: node schemas, validation, templates. No instance credentials.
 - n8n: workflow CRUD and executions against N8N_API_URL. Touches a real
   instance.
@@ -60,8 +78,10 @@ PHASE 4 - Instance reality check
 Run ./scripts/doctor.sh and show me the output. Then tell me, explicitly:
 - which URL the managed server is pointed at
 - whether the public API is enabled and the key is accepted
-- the n8n version, and whether it is a version the pinned n8n-mcp@2.73.0 is
-  known to handle
+- the n8n version, and whether the pinned n8n-mcp@2.73.0 is a good match for it
+  (call tools_documentation to see which n8n version the server is tested
+  against, and flag a large gap: it means schemas may be stale and the pin
+  should be bumped)
 - whether workflows/ has any exported workflows yet
 If the instance already has workflows, run ./scripts/export-all.sh and tell me
 to commit the result before we change anything. That snapshot is the only
@@ -88,8 +108,9 @@ If any step fails, stop there and show me the error. A half-working loop that
 you report as working is worse than a clean failure.
 
 PHASE 6 - Report
-Give me a short status table: prerequisites, skills, hooks, docs MCP, managed
-MCP, instance reachability, end-to-end loop. Mark each pass or fail. Then list,
+Give me a short status table: prerequisites, n8n-mcp install and version, skills,
+hooks, docs MCP, managed MCP, instance reachability, end-to-end loop. Mark each
+pass or fail. Then list,
 in priority order, anything I still need to do myself, and name the doc under
 docs/ that covers each one. Do not pad the report. If everything passed, say so
 in one line.

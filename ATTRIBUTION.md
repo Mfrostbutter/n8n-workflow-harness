@@ -5,17 +5,28 @@ credit in it, when the repo or the skills are copied, shared, or quoted.
 
 ## n8n-mcp and the n8n-skills pack
 
-Both MCP servers in `.mcp.json` are the **n8n-mcp** package, and fifteen of the
-twenty skills in `.claude/skills/` are the **n8n-skills** pack. Both are by
-**Romuald Członkowski**, both MIT licensed:
+**n8n-mcp is the component this harness is built around.** Every node schema,
+every validation result, and every template comes from it. It is pinned in
+`package.json` (`n8n-mcp: 2.73.0`), locked in `package-lock.json` with its
+`sha512` integrity hash, and installed into `node_modules/` by `npm ci` — so it
+is a reviewed, auditable dependency rather than a runtime download.
+
+Fifteen of the twenty skills in `.claude/skills/` are the **n8n-skills** pack.
+Both projects are by **Romuald Członkowski**, both MIT licensed:
 
 | Component | Upstream | License |
 |---|---|---|
 | `n8n-mcp` (both MCP servers) | https://github.com/czlonkowski/n8n-mcp | MIT |
 | `n8n-skills` (15 vendored skills) | https://github.com/czlonkowski/n8n-skills | MIT |
 
-Pinned version: `n8n-mcp@2.73.0`. Full license text in
-[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Full license texts in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+`node_modules/` is gitignored, so this repository does not redistribute
+n8n-mcp's code: it declares a dependency on it, and npm fetches it from the
+registry. `./scripts/vendor-mcp.sh` can pack it for air-gapped installation, and
+if you commit that output you *are* redistributing it — which MIT permits, with
+the licence and copyright notice retained. Keep
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) intact if you do.
 
 The fifteen vendored skills, carried in unmodified:
 

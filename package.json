@@ -1,0 +1,22 @@
+{
+  "name": "n8n-workflow-harness",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Claude Code harness for building n8n workflows: skills, both n8n-mcp servers, and a deterministic toolkit",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "n8n-mcp": "2.73.0"
+  },
+  "scripts": {
+    "verify": "./scripts/verify-setup.sh",
+    "test": "node --test tests/tools.test.mjs tests/instance.test.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "drift": "node scripts/drift-check.mjs",
+    "export": "node scripts/export-all.mjs",
+    "smoke": "node scripts/mcp-smoke.mjs",
+    "setup": "./setup.sh"
+  }
+}

@@ -37,35 +37,47 @@ If upstream has restructured and a skill the script expects is gone, it fails
 with the list rather than silently leaving you short. Refresh by hand and update
 `ATTRIBUTION.md` and the tables in `README.md` and `04-SKILLS.md`.
 
-## Bumping the MCP server
+## Bumping n8n-mcp
 
-Both servers run one pinned package, so one edit moves both.
+`n8n-mcp` is a pinned dependency, so bumping it is an ordinary dependency
+change with a lockfile diff you can review.
 
 ```bash
 npm view n8n-mcp version                    # what is current
 npm view n8n-mcp@latest engines             # Node requirement
 ```
 
-Then edit both `args` arrays in `.mcp.json`:
+Then:
 
-```json
-"args": ["-y", "n8n-mcp@2.74.0"]
+```bash
+npm install --save-exact n8n-mcp@2.74.0     # updates package.json + lock
+npm run smoke                               # server still starts, tools present
+./scripts/verify-setup.sh                    # pin matches install, db present
 ```
 
-Restart Claude Code (the server's version is fixed at spawn) and verify:
+Both servers run the same package, so one bump moves both. Restart Claude Code
+(the server is spawned once per session) and confirm in-session:
 
 ```
-tools_documentation()     # tool count and the n8n version it is tested against
+tools_documentation()     # tool count, and the n8n version it is tested against
 n8n_health_check()        # your instance's actual version
 ```
 
-Update the pin in `ATTRIBUTION.md` and `03-MCP-SERVERS.md` in the same commit.
+Commit `package.json` and `package-lock.json` together, and update the pin
+mentioned in `ATTRIBUTION.md`, `README.md`, and `03-MCP-SERVERS.md`. Regenerate
+`vendor/` if you maintain it.
+
 Bump the server and the skills together when you can: the skills describe the
 server's tools, and a large gap between them is where "the skill names a tool
 that does not exist" comes from.
 
+**Review the diff, not just the version.** `package-lock.json` carries the
+resolved URL and `sha512` integrity hash for n8n-mcp and all 122 transitive
+packages. That diff is the actual supply-chain change, and it is the thing a
+security review wants to see.
+
 **Why pinned at all.** `npx -y n8n-mcp` resolves to whatever is newest at spawn.
-Two engineers on the same repo would get different tool surfaces, and a bug
+Two engineers on the same commit would get different tool surfaces, and a bug
 would be unreproducible. Pinning makes the version a reviewed change.
 
 ## When n8n itself is upgraded
@@ -90,28 +102,40 @@ Trust the live tool over any skill, and bump the server.
 
 ## Networks that block npm
 
-`npx` fetches on first run. Three options when the registry is unreachable:
+`npm ci` needs the registry once. After that the install is self-contained: the
+node database ships inside the package, so nothing is fetched at runtime.
 
-**Pre-seed the cache** on a machine with access, then move it:
+**Preferred: vendor it.** On a machine with registry access, from this repo:
 
 ```bash
-npm cache add n8n-mcp@2.73.0
-# copy ~/.npm to the target machine
+./scripts/vendor-mcp.sh
 ```
 
-**Internal registry.** Mirror the package and point npm at it
-(`.npmrc` with `registry=https://npm.internal.example.com`). `.mcp.json` needs
-no change.
+That writes `vendor/npm-cache` (a warmed cache covering every dependency in the
+lockfile) and the n8n-mcp tarball. Move `vendor/` to the target machine, then:
 
-**Docker.** Upstream publishes `ghcr.io/czlonkowski/n8n-mcp`. Replace the
-`command`/`args` in `.mcp.json` with a `docker run -i --rm` invocation passing
-the same environment variables. Note that pulling the image needs registry
-access too.
+```bash
+npm ci --offline --cache vendor/npm-cache
+./scripts/verify-setup.sh
+```
 
-The toolkit in `scripts/` uses Node built-ins only, so it works with no
-registry access at all. In a fully air-gapped environment you keep `doctor`,
-`health-check`, `drift-check`, `export-all`, and `validate` even with no MCP
-server, which is the point of writing them that way.
+`setup.sh` detects `vendor/npm-cache` and uses it automatically. `vendor/` is
+gitignored by default because it is large; commit it deliberately if offline
+delivery is the point of your copy, and regenerate it whenever the pin changes.
+
+**Internal registry.** Mirror the package and point npm at it (`.npmrc` with
+`registry=https://npm.internal.example.com`). Nothing else changes.
+
+**Docker.** Upstream publishes `ghcr.io/czlonkowski/n8n-mcp`. Replace `command`
+and `args` in `.mcp.json` with a `docker run -i --rm` invocation passing the
+same environment. Pulling the image needs registry access too, so this solves a
+Node-version constraint rather than an offline one.
+
+**Fully air-gapped, no npm at all.** The toolkit in `scripts/` uses Node
+built-ins only, so `doctor`, `health-check`, `drift-check`, `export-all`, and
+`validate` keep working with no MCP server and no `node_modules`. You lose the
+schemas and validators, which is a real loss, but you keep the verification
+layer. That is why they were written without dependencies.
 
 ## Switching to the upstream plugin
 
@@ -132,7 +156,8 @@ tabled in [04-SKILLS.md](04-SKILLS.md#vendored-or-the-upstream-plugin).
 Cheap and worth running on a schedule:
 
 ```bash
-./scripts/verify-setup.sh                                    # offline
+npm run smoke                                                # the engine
+./scripts/verify-setup.sh                                    # the whole clone
 node --test tests/tools.test.mjs tests/instance.test.mjs     # 44 tests
 ./scripts/doctor.sh                                          # instance
 ./scripts/drift-check.sh dev                                 # repo vs reality

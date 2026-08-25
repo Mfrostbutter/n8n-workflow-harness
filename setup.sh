@@ -38,6 +38,26 @@ echo "== script permissions"
 run chmod +x scripts/*.sh .claude/hooks/*.sh
 echo "  scripts and hooks are executable"
 
+echo "== n8n-mcp (the engine: node schemas, validation, templates)"
+PIN="$(node -p "require('./package.json').dependencies['n8n-mcp']" 2>/dev/null || echo '?')"
+if [ -f node_modules/n8n-mcp/package.json ]; then
+  HAVE="$(node -p "require('./node_modules/n8n-mcp/package.json').version" 2>/dev/null || echo '?')"
+  if [ "$HAVE" = "$PIN" ]; then
+    echo "  n8n-mcp $HAVE already installed (pinned $PIN)"
+  else
+    echo "  installed $HAVE but pinned $PIN: reinstalling"
+    run npm ci --no-fund --no-audit
+  fi
+else
+  echo "  installing n8n-mcp $PIN (~100 MB: it carries the prebuilt node database)"
+  if [ -d vendor/npm-cache ]; then
+    echo "  using vendor/npm-cache (offline)"
+    run npm ci --offline --cache vendor/npm-cache --no-fund --no-audit
+  else
+    run npm ci --no-fund --no-audit
+  fi
+fi
+
 echo "== .env"
 if [ -f .env ]; then
   echo "  .env already exists, left alone"

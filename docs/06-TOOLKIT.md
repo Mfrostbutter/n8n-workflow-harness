@@ -87,14 +87,59 @@ execution for the truth.
 
 ```bash
 ./scripts/verify-setup.sh
+./scripts/verify-setup.sh --fast    # skip the server handshake
 ```
 
-Offline preflight over the whole clone: Node version, git, `.mcp.json` shape
-(including that `n8n-docs` carries no credentials), all twenty skills and their
-`SKILL.md` files, both hooks executing cleanly, every toolkit script parsing,
-and whether `.env` is exported or accidentally tracked.
+Preflight over the whole clone: Node version, git, `.mcp.json` shape (including
+that `n8n-docs` carries no credentials), the n8n-mcp pin against what is
+actually installed, the node database, a real MCP handshake, all twenty skills
+and their `SKILL.md` files, both hooks executing cleanly, every toolkit script
+parsing, and whether `.env` is exported or accidentally tracked.
 
-Exit 0 with `RESULT: ok`, or exit 1 with `RESULT: BLOCKED`.
+25 checks. `--fast` skips the handshake, the only slow one, since it loads the
+~94 MB node database.
+
+Needs no instance. Exit 0 with `RESULT: ok`, or exit 1 with `RESULT: BLOCKED`.
+
+## `mcp-smoke` — prove the engine works
+
+```bash
+npm run smoke
+node scripts/mcp-smoke.mjs
+```
+
+Starts the pinned `n8n-mcp` and completes a real MCP `initialize` and
+`tools/list`. Reports the server version and tool counts, and asserts all seven
+documentation tools are present.
+
+With `N8N_API_URL` exported it also asserts the 18 `n8n_*` instance tools
+appeared. That makes it the fastest check for the most common setup failure:
+7 tools when you expected 25 means the credentials never reached the server
+process.
+
+Exit 0 pass, 1 the server started but answered wrong, 2 it could not start.
+
+`scripts/mcp-server.mjs` is the launcher this and `.mcp.json` both use. It
+resolves n8n-mcp relative to its own path, so the working directory does not
+matter, and prints an actionable message if `npm ci` was skipped.
+
+## `vendor-mcp` — air-gapped install
+
+```bash
+./scripts/vendor-mcp.sh [--out <dir>]
+```
+
+Run on a machine **with** registry access. Warms a self-contained npm cache
+covering every dependency in `package-lock.json`, and packs the n8n-mcp tarball.
+Move `vendor/` to the target machine, then:
+
+```bash
+npm ci --offline --cache vendor/npm-cache
+```
+
+`vendor/` is gitignored by default because it is large. Commit it deliberately
+if offline delivery is the point of your copy. Regenerate whenever the pin in
+`package.json` changes.
 
 ## `refresh-skills`
 
@@ -132,6 +177,20 @@ without editing the active pair.
 Exit 1 versus 2 matters in CI: 1 is "the thing you checked is wrong", 2 is "the
 check did not happen". Treating them the same lets a broken check pass as a
 clean result.
+
+## npm scripts
+
+Convenience wrappers, for anyone who reaches for npm first:
+
+| Script | Runs |
+|---|---|
+| `npm run setup` | `./setup.sh` |
+| `npm run verify` | `./scripts/verify-setup.sh` |
+| `npm run smoke` | the MCP handshake |
+| `npm test` | the 44 tests |
+| `npm run doctor` | `doctor.mjs` |
+| `npm run drift` | `drift-check.mjs` |
+| `npm run export` | `export-all.mjs` |
 
 ## Tests
 

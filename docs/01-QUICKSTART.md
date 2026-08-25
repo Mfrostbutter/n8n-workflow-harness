@@ -11,8 +11,14 @@ cd n8n-workflow-harness
 ./setup.sh
 ```
 
-Windows: `.\setup.ps1`. This sets execute bits, creates `.env` from the
-template, runs `git init` if needed, and finishes with an offline preflight.
+Windows: `.\setup.ps1`. This sets execute bits, **installs the pinned
+`n8n-mcp` via `npm ci`**, creates `.env` from the template, runs `git init` if
+needed, and finishes with a preflight.
+
+The n8n-mcp install is ~100 MB and takes a minute: it carries a prebuilt
+database of every n8n node, which is what makes the schemas and validation
+correct rather than guessed. No registry access? See
+[10-MAINTENANCE.md](10-MAINTENANCE.md).
 
 ## 2. Get an n8n API key
 
@@ -55,9 +61,13 @@ deletes a disposable probe workflow to prove the loop works end to end.
 By hand instead:
 
 ```bash
-./scripts/verify-setup.sh    # offline: config, skills, hooks, toolkit
+npm run smoke                # the engine: server starts, 7 docs tools present
+./scripts/verify-setup.sh    # config, n8n-mcp, skills, hooks, toolkit
 ./scripts/doctor.sh          # online: reachability, API capability, repo state
 ```
+
+With credentials exported, `npm run smoke` should report **25** tools, not 7.
+Seven means the environment did not reach the server process, which is step 4.
 
 ## 6. Snapshot before you change anything
 

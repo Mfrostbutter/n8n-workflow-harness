@@ -6,9 +6,17 @@ building n8n workflows in this repository.
 ## What this repo is
 
 A build harness. Workflow JSON under `workflows/<env>/` is the source of truth;
-the n8n canvas is a view of it. Two MCP servers are configured: `n8n-docs`
-(node schemas, validation, templates, no instance access) and `n8n` (workflow
-CRUD and executions against whatever `N8N_API_URL` points at).
+the n8n canvas is a view of it.
+
+Both MCP servers run **n8n-mcp**, pinned in `package.json` and installed into
+`node_modules/`. It is the source of every node schema, validator, and template
+here, and it is why you configure from the live schema rather than from memory.
+`n8n-docs` carries no credentials (schemas, validation, templates); `n8n` reaches
+whatever `N8N_API_URL` points at (workflow CRUD, executions).
+
+If a server is not answering, run `npm run smoke`: it completes a real MCP
+handshake and reports the tool count. 7 means docs mode, 25 means credentials
+reached the server.
 
 ## Non-negotiables
 

@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "n8n-docs": {
-      "command": "npx",
-      "args": ["-y", "n8n-mcp@2.73.0"],
+      "command": "node",
+      "args": ["scripts/mcp-server.mjs"],
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
@@ -10,14 +10,16 @@
       }
     },
     "n8n": {
-      "command": "npx",
-      "args": ["-y", "n8n-mcp@2.73.0"],
+      "command": "node",
+      "args": ["scripts/mcp-server.mjs"],
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
         "DISABLE_CONSOLE_OUTPUT": "true",
         "N8N_API_URL": "${N8N_API_URL:-}",
-        "N8N_API_KEY": "${N8N_API_KEY:-}"
+        "N8N_API_KEY": "${N8N_API_KEY:-}",
+        "N8N_CF_CLIENT_ID": "${N8N_CF_CLIENT_ID:-}",
+        "N8N_CF_CLIENT_SECRET": "${N8N_CF_CLIENT_SECRET:-}"
       }
     }
   }

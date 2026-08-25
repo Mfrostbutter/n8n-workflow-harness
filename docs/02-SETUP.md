@@ -8,15 +8,15 @@ The full path, with the reasoning. For the fast version see
 
 | Need | Why | Check |
 |---|---|---|
-| Node 20+ | Both MCP servers and the whole toolkit | `node --version` |
+| Node 20+ and npm | Both MCP servers and the whole toolkit | `node --version` |
 | Git | Rollback. Without it there is no undo | `git --version` |
 | Claude Code | The harness itself | `claude --version` |
 | n8n instance, public API on | Anything that touches a workflow | Settings → n8n API |
 | An API key | Same | Settings → n8n API → Create |
 
-Node ships `npx`, which is how both MCP servers start. If your network blocks
-the npm registry, see [10-MAINTENANCE.md](10-MAINTENANCE.md) for the offline and
-Docker options.
+You also need ~170 MB of disk for `node_modules`, most of it n8n-mcp's prebuilt
+node database. If your network blocks the npm registry, see
+[10-MAINTENANCE.md](10-MAINTENANCE.md) for the offline path.
 
 ## 1. Clone and run setup
 
@@ -29,9 +29,14 @@ cd n8n-workflow-harness
 
 Windows: `.\setup.ps1 -DryRun`, then `.\setup.ps1`.
 
-It sets execute bits on `scripts/` and `.claude/hooks/`, copies `.env.example`
-to `.env` if absent, runs `git init` if this is not already a repo, and ends
-with `./scripts/verify-setup.sh`.
+It sets execute bits on `scripts/` and `.claude/hooks/`, **installs the pinned
+`n8n-mcp` via `npm ci`**, copies `.env.example` to `.env` if absent, runs
+`git init` if this is not already a repo, and ends with
+`./scripts/verify-setup.sh`.
+
+The n8n-mcp install is the slow part (~100 MB, because it carries the node
+database that makes validation accurate). If `vendor/npm-cache` exists it
+installs offline from there instead.
 
 It does **not** write credentials and does **not** contact an instance.
 
@@ -98,7 +103,15 @@ no credentials), all twenty skills and their `SKILL.md` files, both hooks
 executing cleanly, every toolkit script parsing, and whether `.env` is exported
 or accidentally tracked. Exit 0 and `RESULT: ok`, or exit 1 and `RESULT: BLOCKED`.
 
-No instance needed. Run it any time something feels wrong.
+No instance needed. Run it any time something feels wrong. It includes a real
+MCP handshake against n8n-mcp, so a pass means the server actually started and
+answered.
+
+To check just the engine:
+
+```bash
+npm run smoke        # expect 7 tools with no credentials
+```
 
 ## 5. Verify against the instance
 
@@ -116,7 +129,14 @@ Then confirm the MCP surface from inside Claude Code:
   `get_node` on the Webhook node. All must answer with no credentials.
 - Managed mode: `n8n_health_check`, then `n8n_list_workflows`.
 
-If docs mode answers and managed mode fails on auth, go back to step 3.
+If docs mode answers and managed mode fails on auth, go back to step 3. The
+fastest confirmation that credentials reached the server process:
+
+```bash
+set -a; . ./.env; set +a; npm run smoke     # expect 25 tools, not 7
+```
+
+7 tools with `N8N_API_URL` set means the environment did not reach the server.
 
 ## 6. Baseline snapshot
 

@@ -2,6 +2,37 @@
 
 Ordered by how often each one actually bites.
 
+## Both MCP servers fail to start
+
+Almost always: `npm ci` was never run, so the pinned n8n-mcp is not installed.
+
+```bash
+npm ci
+npm run smoke
+```
+
+`scripts/mcp-server.mjs` prints the path it looked in, so run it directly to see
+the message Claude Code may be swallowing:
+
+```bash
+node scripts/mcp-server.mjs      # prints an install hint and exits 1 if missing
+```
+
+Registry blocked? See [10-MAINTENANCE.md](10-MAINTENANCE.md) for the `vendor/`
+offline path.
+
+## `npm run smoke` reports 7 tools when you expected 25
+
+The server started but never saw the credentials. 7 tools is docs mode. Export
+the environment before launching:
+
+```bash
+set -a; . ./.env; set +a
+npm run smoke                    # now expect 25
+```
+
+Same root cause as the next entry.
+
 ## `n8n_*` tools fail on auth, but docs tools work
 
 **Cause:** the environment did not reach the MCP process. `.mcp.json` expands
@@ -117,13 +148,19 @@ node --test tests/tools.test.mjs tests/instance.test.mjs
 
 Current Node resolves a bare directory as a module.
 
-## MCP server will not start
+## MCP server still will not start
 
-- `npx` needs the npm registry on first run. Blocked network:
-  [10-MAINTENANCE.md](10-MAINTENANCE.md).
+- Confirm it is installed and matches the pin: `./scripts/verify-setup.sh`.
+- Run the launcher directly: `node scripts/mcp-server.mjs`. It prints the path
+  it searched.
 - Node must be 20+. `node --version`.
+- A partial install (interrupted `npm ci`) can leave the package without its
+  node database. `verify-setup` checks for `data/nodes.db` specifically;
+  reinstall with `npm ci` if it is missing.
 - `/mcp` inside Claude Code shows connection state and errors.
 - `claude --debug` prints MCP startup and hook execution logs.
+- Last resort, if you cannot run `npm ci` at all:
+  `cp .mcp.npx.json .mcp.json` to fetch from the registry instead.
 
 ## An instance call returns NOT_FOUND for something that exists
 
@@ -134,9 +171,10 @@ and re-check. Verify the target **before** any credential write.
 ## Getting more detail
 
 ```bash
+npm run smoke                   # the engine: does the server answer at all
 claude --debug                  # MCP startup, hook execution
 ./scripts/doctor.sh             # environment, reachability, repo state
-./scripts/verify-setup.sh       # offline: config, skills, hooks, toolkit
+./scripts/verify-setup.sh       # config, n8n-mcp, skills, hooks, toolkit
 ./scripts/health-check.sh 24    # instance-wide failure count
 ```
 

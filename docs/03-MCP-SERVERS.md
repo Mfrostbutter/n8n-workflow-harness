@@ -1,30 +1,72 @@
 # MCP servers
 
+## n8n-mcp is the engine
+
+**Upstream: https://github.com/czlonkowski/n8n-mcp** (MIT, Romuald Członkowski)
+
+Every correct node parameter, every real validation result, and every template
+in this harness comes from `n8n-mcp`. It is not a convenience: it is the
+component that replaces a model's stale training data with the actual schema for
+the n8n version in front of you.
+
+What ships inside the package:
+
+- 2,500+ node schemas (832 core, 1,700+ community), 99% property coverage
+- real validators for a single node and for a whole workflow
+- 2,700+ workflow templates with searchable metadata
+- a prebuilt SQLite database (`data/nodes.db`, ~94 MB) holding all of it
+
+That database is why the install is ~100 MB and why it works with no network
+once installed.
+
+## Pinned, not downloaded on demand
+
+```json
+"dependencies": { "n8n-mcp": "2.73.0" }
+```
+
+`package.json` pins it, `package-lock.json` commits the resolved URL and the
+`sha512` integrity hash, and `npm ci` reproduces the exact install anywhere.
+`./setup.sh` runs that for you.
+
+**Why not `npx -y n8n-mcp`?** Because it resolves to whatever is newest when the
+server spawns. Two engineers on the same commit would get different tool
+surfaces, a reported bug would be unreproducible, and a security review of "we
+run n8n-mcp" would mean nothing. Pinning makes the version a reviewed change,
+like any other dependency.
+
+`scripts/mcp-server.mjs` is the launcher `.mcp.json` calls. It resolves the
+package relative to its own location, so the working directory the client uses
+does not matter, and if `npm ci` was skipped it says so in plain language
+instead of failing with `ENOENT`.
+
 ## Two servers, one package
 
-`.mcp.json` registers `n8n-mcp` twice. The package changes behaviour based on
-whether it can see instance credentials, so registering it twice gives you a
-safe half and a privileged half that are impossible to confuse.
+`n8n-mcp` changes behaviour depending on whether it can see instance
+credentials, so it is registered twice. That gives you a half that cannot
+possibly touch an instance and a half that can, with no ambiguity about which
+you are calling.
 
-| Server | Credentials | Reaches an instance | Use for |
-|---|---|---|---|
-| `n8n-docs` | none | No | Node schemas, validation, templates |
-| `n8n` | `N8N_API_URL`, `N8N_API_KEY` | **Yes** | Workflow CRUD, executions, credentials, audit |
+| Server | Credentials | Tools | Reaches an instance | Use for |
+|---|---|---|---|---|
+| `n8n-docs` | none | 7 | No | Node schemas, validation, templates |
+| `n8n` | `N8N_API_URL`, `N8N_API_KEY` | 25 | **Yes** | Workflow CRUD, executions, credentials, audit |
 
 **There is no `n8n-docs-mcp` package.** If you went looking for one on npm you
 would not find it. "Docs mode" is `n8n-mcp` started without an API URL. That is
-worth knowing because it means the two servers are always the same version, and
-bumping the pin in [10-MAINTENANCE.md](10-MAINTENANCE.md) moves both together.
+worth knowing: the two servers are always the same version, so the pin moves
+both together.
 
-Pinned to `n8n-mcp@2.73.0` for reproducibility. Unpinned `npx -y n8n-mcp` would
-silently change under you between sessions, which is exactly the drift the
-harness exists to prevent.
+Counts above are measured, not quoted: `npm run smoke` completes a real
+handshake and prints them. Note the server's own `tools_documentation` says
+"24 tools" because it does not count `tools_documentation` itself in its
+categories; the wire protocol exposes 7 without credentials and 25 with.
 
 ## Tool inventory
 
-The server reports **24 tools**: 6 available without credentials, 18 that need
-them. `tools_documentation` is exposed as well and is the best first call in a
-session on an unfamiliar n8n version.
+**7 tools without credentials, 25 with** (the 7 plus 18 instance tools).
+`tools_documentation` is the best first call in a session on an unfamiliar n8n
+version.
 
 ### `n8n-docs` (no credentials)
 
@@ -101,7 +143,75 @@ are seeing, this is why.
 `:-` in `${N8N_API_URL:-}` keeps the server from failing to start when the
 variable is absent, so docs work regardless.
 
+## Install paths
+
+Five ways to get the server, in order of preference.
+
+### 1. Pinned local install (default)
+
+```bash
+npm ci
+npm run smoke
+```
+
+Reproducible, auditable, offline after the first install. This is what
+`.mcp.json` expects.
+
+### 2. Air-gapped
+
+On a machine with registry access:
+
+```bash
+./scripts/vendor-mcp.sh          # writes vendor/npm-cache and the tarball
+```
+
+Move `vendor/` to the target machine, then:
+
+```bash
+npm ci --offline --cache vendor/npm-cache
+```
+
+`vendor/` is gitignored by default because it is large. Commit it deliberately
+if air-gapped delivery is the point of your copy.
+
+### 3. npx fallback
+
+If you cannot run `npm ci` at all:
+
+```bash
+cp .mcp.npx.json .mcp.json
+```
+
+Still version-qualified (`n8n-mcp@2.73.0`), but no lockfile and no integrity
+hash. Fetches from the registry on first run.
+
+### 4. Docker
+
+Upstream publishes `ghcr.io/czlonkowski/n8n-mcp`. Replace `command` and `args`
+in `.mcp.json` with a `docker run -i --rm` invocation passing the same
+environment variables. Pulling the image needs registry access too, so this
+helps with a Node-version constraint rather than an offline one.
+
+### 5. From source
+
+```bash
+git clone https://github.com/czlonkowski/n8n-mcp.git
+cd n8n-mcp && npm install && npm run build
+```
+
+Then point `.mcp.json` at the built `dist/mcp/stdio-wrapper.js`. Only worth it
+if you are modifying the server; note it builds the node database as part of
+setup. Follow upstream's own instructions, not these.
+
 ## Verifying both servers
+
+```bash
+npm run smoke                              # no credentials: expect 7 tools
+set -a; . ./.env; set +a; npm run smoke    # with credentials: expect 25
+```
+
+The smoke test completes a real `initialize` and `tools/list`, so a pass means
+the server genuinely started and answered, not merely that a file exists.
 
 Inside Claude Code, `/mcp` lists servers, connection state, and tool counts.
 Then:
@@ -144,8 +254,16 @@ n8n ships its own, and it is the supported path:
 Where they overlap, prefer the official tooling: it tracks the product. This
 harness is for what it does not cover yet.
 
-## Networks that block npm
+## Upstream
 
-`npx` fetches the package on first run. If the registry is unreachable, see
-[10-MAINTENANCE.md](10-MAINTENANCE.md) for pre-seeding the npm cache, pointing
-at an internal registry, or the upstream Docker image.
+`n8n-mcp` is third-party MIT software that this harness depends on completely.
+Worth knowing where to go:
+
+- Repository and issues: https://github.com/czlonkowski/n8n-mcp
+- The skills pack: https://github.com/czlonkowski/n8n-skills
+- Sponsor: https://github.com/sponsors/czlonkowski
+
+Upstream also runs a hosted option at `dashboard.n8n-mcp.com` with a free tier,
+which is useful for a quick trial but not what this harness is built around: a
+hosted server means your workflow JSON and node queries leave your network,
+which is usually the wrong trade for enterprise delivery.

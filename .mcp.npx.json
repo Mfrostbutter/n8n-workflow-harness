@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "Fallback MCP configuration: runs n8n-mcp straight from the npm registry",
+    "instead of the version pinned in package.json. Use it only if you cannot",
+    "run 'npm ci' in this repo. Copy over .mcp.json to activate.",
+    "Trade-off: no lockfile, no integrity hash, and the version can move",
+    "between sessions, so two engineers may get different tool surfaces."
+  ],
+  "mcpServers": {
+    "n8n-docs": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp@2.73.0"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true"
+      }
+    },
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp@2.73.0"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "${N8N_API_URL:-}",
+        "N8N_API_KEY": "${N8N_API_KEY:-}"
+      }
+    }
+  }
+}

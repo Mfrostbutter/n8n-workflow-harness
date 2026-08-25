@@ -8,6 +8,10 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 
+# --fast skips the server handshake, which loads a ~94 MB node database.
+FAST=0
+[ "${1:-}" = "--fast" ] && FAST=1
+
 FAIL=0
 PASS=0
 ok()   { echo "  ok    $*"; PASS=$((PASS+1)); }
@@ -47,8 +51,56 @@ if [ -f .mcp.json ] && command -v node >/dev/null 2>&1; then
       console.log("  FAIL  n8n-docs must NOT carry N8N_API_URL: keep docs mode credential-free");
       process.exit(3);
     }
+    const usesLauncher = want.every(n => (s[n].args||[]).some(a => String(a).includes("mcp-server.mjs")));
     console.log("  ok    .mcp.json declares both servers, docs mode is credential-free");
+    if (usesLauncher) console.log("  ok    both servers use the pinned local install");
+    else console.log("  note  .mcp.json is not using scripts/mcp-server.mjs (npx fallback?)");
   ' || FAIL=$((FAIL+1))
+fi
+
+echo
+echo "== n8n-mcp (node schemas, validation, templates)"
+if [ -f package.json ]; then
+  PIN="$(node -p "require('./package.json').dependencies['n8n-mcp']" 2>/dev/null || echo '')"
+  [ -n "$PIN" ] && ok "pinned to n8n-mcp@$PIN in package.json" \
+    || bad "package.json does not pin n8n-mcp"
+else
+  bad "package.json missing: n8n-mcp is not pinned"
+fi
+[ -f package-lock.json ] && ok "package-lock.json present (reproducible install)" \
+  || bad "package-lock.json missing: installs are not reproducible"
+
+if [ -f node_modules/n8n-mcp/package.json ]; then
+  HAVE="$(node -p "require('./node_modules/n8n-mcp/package.json').version" 2>/dev/null || echo '?')"
+  if [ "$HAVE" = "${PIN:-}" ]; then ok "n8n-mcp $HAVE installed, matches the pin"
+  else bad "n8n-mcp $HAVE installed but pinned ${PIN:-?}. Run: npm ci"; fi
+  if [ -f node_modules/n8n-mcp/data/nodes.db ]; then
+    DBSZ="$(du -h node_modules/n8n-mcp/data/nodes.db 2>/dev/null | cut -f1)"
+    ok "node database present ($DBSZ) - this is what makes validation accurate"
+  else
+    bad "node database missing at node_modules/n8n-mcp/data/nodes.db"
+  fi
+else
+  bad "n8n-mcp not installed. Run: npm ci   (offline: see docs/10-MAINTENANCE.md)"
+fi
+
+if [ -f scripts/mcp-server.mjs ]; then
+  node --check scripts/mcp-server.mjs 2>/dev/null && ok "mcp-server.mjs launcher parses" \
+    || bad "scripts/mcp-server.mjs has a syntax error"
+else
+  bad "scripts/mcp-server.mjs missing: .mcp.json cannot start the server"
+fi
+
+# Real MCP handshake against the server. Skipped with --fast: it costs a few
+# seconds because the server loads the node database.
+if [ "$FAST" = 1 ]; then
+  note "server handshake skipped (--fast)"
+elif [ -f scripts/mcp-smoke.mjs ] && [ -f node_modules/n8n-mcp/package.json ]; then
+  if node scripts/mcp-smoke.mjs >/dev/null 2>&1; then
+    ok "server completes an MCP handshake and exposes all 7 docs tools"
+  else
+    bad "server failed its handshake. Run: node scripts/mcp-smoke.mjs"
+  fi
 fi
 
 echo
