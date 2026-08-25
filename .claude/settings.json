@@ -1,0 +1,63 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(node scripts/:*)",
+      "Bash(./scripts/doctor.sh:*)",
+      "Bash(./scripts/health-check.sh:*)",
+      "Bash(./scripts/drift-check.sh:*)",
+      "Bash(./scripts/export-all.sh:*)",
+      "Bash(./scripts/validate.sh:*)",
+      "Bash(node --version)",
+      "Bash(node --test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "mcp__n8n-docs__search_nodes",
+      "mcp__n8n-docs__get_node",
+      "mcp__n8n-docs__validate_node",
+      "mcp__n8n-docs__validate_workflow",
+      "mcp__n8n-docs__search_templates",
+      "mcp__n8n-docs__get_template",
+      "mcp__n8n-docs__tools_documentation"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Bash(git push --force:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "enabledMcpjsonServers": ["n8n-docs", "n8n"],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__n8n__n8n_(create_workflow|update_partial_workflow|update_full_workflow|delete_workflow|autofix_workflow|deploy_template|manage_credentials|manage_folders)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-n8n-write.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
