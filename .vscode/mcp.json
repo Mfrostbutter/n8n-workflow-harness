@@ -1,0 +1,39 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "n8n-api-url",
+      "description": "n8n instance URL for workflow CRUD (dev, not prod). Leave blank for documentation-only mode."
+    },
+    {
+      "type": "promptString",
+      "id": "n8n-api-key",
+      "description": "n8n API key (Settings > n8n API). Stored by VS Code, never written to the repo.",
+      "password": true
+    }
+  ],
+  "servers": {
+    "n8n-docs": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/scripts/mcp-server.mjs"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true"
+      }
+    },
+    "n8n": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/scripts/mcp-server.mjs"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "${input:n8n-api-url}",
+        "N8N_API_KEY": "${input:n8n-api-key}"
+      }
+    }
+  }
+}

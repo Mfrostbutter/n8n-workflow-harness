@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-08-25 (c)
+
+Editor support beyond Claude Code. The engine is a standard MCP server, so the
+schemas and validation were always portable; what was missing was the config and
+the guidance layer for other clients.
+
+- `.vscode/mcp.json` for VS Code + GitHub Copilot. Uses the `servers` key (VS
+  Code differs from every other client here) and an `inputs` block, so VS Code
+  prompts for the instance URL and API key and stores them itself. `verify-setup`
+  now checks both files use the key their editor actually expects, since the
+  wrong one is silently ignored.
+- `.cursor/mcp.json` for Cursor.
+- `scripts/gen-editor-configs.mjs` (`npm run gen:editors`) generates `AGENTS.md`,
+  `.github/copilot-instructions.md`, `.cursor/rules/n8n-harness.mdc`, and
+  `.windsurf/rules/n8n-harness.md` from **one source**: the contract in
+  `CLAUDE.md` plus the frontmatter of every installed skill. Four editors want
+  the same rules in four formats; this stops them becoming four copies that
+  drift. `npm run check:editors` exits 1 when stale, and `verify-setup` fails on
+  drift.
+- The generated files carry an index of all 20 skills with their file paths and
+  what each owns, which is the degradation path outside Claude Code: the agent is
+  told the skills exist and where to read them, rather than loading them
+  automatically.
+- `docs/11-EDITORS.md`: support matrix, per-editor setup (including Windsurf and
+  Codex, whose MCP config is global and needs absolute paths), how to get value
+  from the skills without auto-loading, and an explicit statement of what cannot
+  port — the hooks are Claude Code only.
+- README, docs index, and the AI setup prompt are now editor-agnostic.
+
+Fixed in the generator's frontmatter parser: five skills declare `description`
+as a YAML folded block scalar (`>-`), and a naive line match produced the
+literal `>-` as the description. It now handles block and plain scalars, so all
+20 routing entries are correct.
+
 ## 2026-08-25 (b)
 
 n8n-mcp promoted from an implicit runtime download to a first-class pinned

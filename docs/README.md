@@ -14,7 +14,10 @@ Read in order if you are new; jump straight in if you are not.
 | [08-SECURITY.md](08-SECURITY.md) | Credentials, data boundaries, what never enters the repo |
 | [09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md) | It succeeded but nothing happened |
 | [10-MAINTENANCE.md](10-MAINTENANCE.md) | Refreshing skills, bumping the server, the plugin path |
+| [11-EDITORS.md](11-EDITORS.md) | VS Code, Cursor, Windsurf, Codex, and other MCP clients |
 
 Repo-level files worth reading once: [../CLAUDE.md](../CLAUDE.md) (the operating
-contract Claude loads every session), [../AI_SETUP_PROMPT.md](../AI_SETUP_PROMPT.md)
-(hand setup to Claude), [../ATTRIBUTION.md](../ATTRIBUTION.md).
+contract, and the source the other editors' contracts are generated from),
+[../AGENTS.md](../AGENTS.md) (the same contract for any non-Claude agent),
+[../AI_SETUP_PROMPT.md](../AI_SETUP_PROMPT.md) (hand setup to an agent),
+[../ATTRIBUTION.md](../ATTRIBUTION.md).

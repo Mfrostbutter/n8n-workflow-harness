@@ -1,9 +1,13 @@
 # AI setup prompt
 
-Copy everything in the fenced block below and paste it as your first message in
-a fresh Claude Code session started **inside this repository**. Claude will
-check prerequisites, wire up the harness, verify it against your instance, and
-stop to ask you for anything it cannot safely guess.
+Copy everything in the fenced block below and paste it as your first message to
+an agent working **inside this repository**. It will check prerequisites, wire up
+the harness, verify it against your instance, and stop to ask you for anything it
+cannot safely guess.
+
+Works in Claude Code, VS Code with Copilot (Agent mode), Cursor, Windsurf, Codex,
+or any MCP-capable client. Outside Claude Code, read `AGENTS.md` first if the
+agent has not already loaded it — see [docs/11-EDITORS.md](docs/11-EDITORS.md).
 
 Prefer to do it yourself? Run `./setup.sh` and follow
 [docs/02-SETUP.md](docs/02-SETUP.md). The two paths are equivalent.
@@ -11,8 +15,9 @@ Prefer to do it yourself? Run `./setup.sh` and follow
 ---
 
 ```text
-You are setting up this n8n workflow harness for me. Read CLAUDE.md first, then
-work through the phases below in order. Do not skip a phase, and do not run
+You are setting up this n8n workflow harness for me. Read CLAUDE.md first (or
+AGENTS.md if you are not Claude Code - same contract), then work through the
+phases below in order. Do not skip a phase, and do not run
 ahead to workflow building: this session is setup and verification only.
 
 Rules for this session:
@@ -70,9 +75,14 @@ package, both running the pinned n8n-mcp via scripts/mcp-server.mjs:
 Verify docs mode by calling tools_documentation, then search_nodes for
 "webhook", then get_node on the Webhook node. Verify managed mode with
 n8n_health_check and n8n_list_workflows.
-If a server is missing, tell me to approve it (Claude Code prompts on first use
-of a project .mcp.json) or to check /mcp, and show me what you see. If only
-n8n-docs works, say so plainly rather than proceeding as if both do.
+If a server is missing, tell me how to enable it for the editor I am actually
+using, and show me what you see:
+- Claude Code: approve the project .mcp.json when prompted; check /mcp
+- VS Code + Copilot: MCP: List Servers, and be in Agent mode, not Ask
+- Cursor: Settings > MCP
+- Windsurf / Codex: MCP config is global and needs an absolute path to
+  scripts/mcp-server.mjs (see docs/11-EDITORS.md)
+If only n8n-docs works, say so plainly rather than proceeding as if both do.
 
 PHASE 4 - Instance reality check
 Run ./scripts/doctor.sh and show me the output. Then tell me, explicitly:
@@ -109,8 +119,10 @@ you report as working is worse than a clean failure.
 
 PHASE 6 - Report
 Give me a short status table: prerequisites, n8n-mcp install and version, skills,
-hooks, docs MCP, managed MCP, instance reachability, end-to-end loop. Mark each
-pass or fail. Then list,
+hooks (Claude Code only), docs MCP, managed MCP, instance reachability,
+end-to-end loop. Mark each pass or fail. Name which editor you are running in,
+and if it is not Claude Code, note that the skills do not auto-load and I should
+name the SKILL.md file in prompts. Then list,
 in priority order, anything I still need to do myself, and name the doc under
 docs/ that covers each one. Do not pad the report. If everything passed, say so
 in one line.
@@ -127,3 +139,5 @@ in one line.
   setup reported as working when it is not costs more than a clear failure.
 - **It does not build your real workflows.** Start a new session for that, so
   setup output is not competing for context with the build.
+- **It does not assume Claude Code.** Outside Claude Code the skills do not load
+  by themselves, so the report says so rather than letting you assume otherwise.

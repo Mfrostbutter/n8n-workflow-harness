@@ -6,7 +6,12 @@ n8n-mcp servers pinned as a real dependency, a deterministic toolkit, and the
 discipline that keeps a generated workflow from failing quietly in production.
 
 Clone it, point it at a dev instance, and build. Everything is project-scoped,
-so it runs without touching your global Claude Code configuration.
+so it runs without touching your global editor configuration.
+
+**Works in Claude Code, VS Code with GitHub Copilot, Cursor, Windsurf, Codex,
+and any other MCP-capable client.** Config for each is already in the repo. The
+engine is a standard MCP server, so the schemas and validation are identical
+everywhere; see [docs/11-EDITORS.md](docs/11-EDITORS.md) for what differs.
 
 ```bash
 git clone <repo-url> n8n-workflow-harness
@@ -51,9 +56,15 @@ CLAUDE.md                   the operating contract, loaded automatically
 AI_SETUP_PROMPT.md          paste-in prompt that sets up and verifies the harness
 setup.sh / setup.ps1        one-time wiring for a fresh clone
 package.json                pins n8n-mcp; package-lock.json locks it
-.mcp.json                   both MCP servers, project-scoped
+.mcp.json                   Claude Code: both MCP servers
+.vscode/mcp.json            VS Code + Copilot: same servers, prompts for the key
+.cursor/mcp.json            Cursor: same servers
 .mcp.npx.json               fallback config if you cannot run npm ci
 .env.example                instance URL and API key template
+AGENTS.md                   cross-tool contract (Codex, Cursor, Zed, ...)  generated
+.github/copilot-instructions.md   VS Code Copilot contract              generated
+.cursor/rules/              Cursor project rule                          generated
+.windsurf/rules/            Windsurf rule                                generated
 .claude/
   settings.json             permissions allowlist and hook registration
   skills/                   20 skills, loaded automatically in this project
@@ -62,6 +73,7 @@ scripts/                    the deterministic toolkit (Node built-ins only)
   mcp-server.mjs            launches the pinned n8n-mcp, cwd-independent
   mcp-smoke.mjs             real MCP handshake against the server
   vendor-mcp.sh             pack n8n-mcp for an air-gapped install
+  gen-editor-configs.mjs    regenerate the editor contracts from CLAUDE.md
   refresh-skills.sh         re-vendor the 15 upstream skills
   verify-setup.sh           preflight over the whole clone
 workflows/{dev,staging,prod}/   workflow JSON: the source of truth
@@ -243,6 +255,36 @@ never a blocked call.
 
 Disable them by removing the `hooks` block from `.claude/settings.json`.
 
+## Editors
+
+| | Claude Code | VS Code + Copilot | Cursor | Windsurf | Codex |
+|---|---|---|---|---|---|
+| n8n-mcp: schemas, validation, templates | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Instance tools: workflow CRUD, executions | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Toolkit (`drift-check`, `doctor`, …) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Contract loaded automatically | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 20 skills load on their own | ✅ | read on demand | read on demand | read on demand | read on demand |
+| Hook enforcement layer | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+Everything needed to build a correct workflow works everywhere, because the
+engine is one pinned MCP server. Outside Claude Code you lose automatic skill
+loading and the hooks — both guidance, not capability. The generated instruction
+files carry an index of all twenty skills with their paths, so the agent knows
+what exists and where to read it; you just name the file in the prompt.
+
+Four editors want the same rules in four formats, so they are generated from
+one source instead of maintained as four copies:
+
+```bash
+npm run gen:editors      # regenerate from CLAUDE.md + the installed skills
+npm run check:editors    # exit 1 if any is stale
+```
+
+Edit `CLAUDE.md`, then regenerate. `verify-setup.sh` fails if they drift apart.
+
+Per-editor setup, including Windsurf and Codex (which keep MCP config globally,
+so they need absolute paths): [docs/11-EDITORS.md](docs/11-EDITORS.md).
+
 ## Documentation
 
 | Doc | Read it when |
@@ -257,12 +299,14 @@ Disable them by removing the `hooks` block from `.claude/settings.json`.
 | [08-SECURITY.md](docs/08-SECURITY.md) | Credentials, data boundaries, what never enters the repo |
 | [09-TROUBLESHOOTING.md](docs/09-TROUBLESHOOTING.md) | It succeeded but nothing happened |
 | [10-MAINTENANCE.md](docs/10-MAINTENANCE.md) | Refreshing skills, bumping the pinned server, the plugin path |
+| [11-EDITORS.md](docs/11-EDITORS.md) | Setup for VS Code, Cursor, Windsurf, Codex, and other MCP clients |
 
 ## Requirements
 
 - Node 20+ and npm (the toolkit and both MCP servers need it)
 - Git
-- Claude Code
+- An MCP-capable editor: Claude Code, VS Code with Copilot (Agent mode), Cursor,
+  Windsurf, Codex, or another MCP client
 - An n8n instance with the public API enabled, and an API key. Dev, not prod.
 - ~170 MB of disk for `node_modules`, most of it n8n-mcp's node database.
   `node_modules/` is gitignored; only the lockfile is committed.

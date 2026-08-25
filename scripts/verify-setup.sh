@@ -125,6 +125,39 @@ else
 fi
 
 echo
+echo "== editor support"
+for f in .mcp.json .vscode/mcp.json .cursor/mcp.json; do
+  [ -f "$f" ] && ok "$f present" || bad "$f missing"
+done
+for f in AGENTS.md .github/copilot-instructions.md .cursor/rules/n8n-harness.mdc \
+         .windsurf/rules/n8n-harness.md; do
+  [ -f "$f" ] || bad "$f missing (run: npm run gen:editors)"
+done
+if [ -f scripts/gen-editor-configs.mjs ]; then
+  if node scripts/gen-editor-configs.mjs --check >/dev/null 2>&1; then
+    ok "editor instruction files match CLAUDE.md and the installed skills"
+  else
+    bad "editor instruction files are stale. Run: npm run gen:editors"
+  fi
+fi
+# VS Code uses "servers"; Cursor and Claude Code use "mcpServers". Mixing them
+# up produces a config the editor silently ignores.
+if [ -f .vscode/mcp.json ]; then
+  node -e '
+    const c = JSON.parse(require("fs").readFileSync(".vscode/mcp.json","utf8"));
+    if (!c.servers) { console.log("  FAIL  .vscode/mcp.json must use the \"servers\" key, not \"mcpServers\""); process.exit(3); }
+    console.log("  ok    .vscode/mcp.json uses the \"servers\" key VS Code expects");
+  ' || FAIL=$((FAIL+1))
+fi
+if [ -f .cursor/mcp.json ]; then
+  node -e '
+    const c = JSON.parse(require("fs").readFileSync(".cursor/mcp.json","utf8"));
+    if (!c.mcpServers) { console.log("  FAIL  .cursor/mcp.json must use the \"mcpServers\" key"); process.exit(3); }
+    console.log("  ok    .cursor/mcp.json uses the \"mcpServers\" key Cursor expects");
+  ' || FAIL=$((FAIL+1))
+fi
+
+echo
 echo "== hooks"
 for h in session-start pre-n8n-write; do
   if [ -x ".claude/hooks/$h.sh" ]; then

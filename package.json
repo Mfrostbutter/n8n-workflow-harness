@@ -17,6 +17,8 @@
     "drift": "node scripts/drift-check.mjs",
     "export": "node scripts/export-all.mjs",
     "smoke": "node scripts/mcp-smoke.mjs",
-    "setup": "./setup.sh"
+    "setup": "./setup.sh",
+    "gen:editors": "node scripts/gen-editor-configs.mjs",
+    "check:editors": "node scripts/gen-editor-configs.mjs --check"
   }
 }
