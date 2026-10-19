@@ -2,7 +2,7 @@
 
 Ordered by how often each one actually bites.
 
-## Both MCP servers fail to start
+## The n8n-mcp servers fail to start
 
 Almost always: `npm ci` was never run, so the pinned n8n-mcp is not installed.
 

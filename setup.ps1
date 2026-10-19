@@ -82,7 +82,7 @@ Next:
        claude
 
      .mcp.json reads N8N_API_URL from the process environment, not the file on
-     disk. Approve both MCP servers when prompted.
+     disk. Approve the MCP servers when prompted.
   3. Confirm the instance is reachable:  node scripts\doctor.mjs
   4. Snapshot before changing anything:  node scripts\export-all.mjs
 

@@ -56,7 +56,7 @@ you are calling.
 
 **There is no `n8n-docs-mcp` package.** If you went looking for one on npm you
 would not find it. "Docs mode" is `n8n-mcp` started without an API URL. That is
-worth knowing: the two servers are always the same version, so the pin moves
+worth knowing: the two n8n-mcp servers are always the same version, so the pin moves
 both together.
 
 Counts above are measured, not quoted: `npm run smoke` completes a real

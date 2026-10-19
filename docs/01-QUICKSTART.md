@@ -50,13 +50,13 @@ claude
 Claude Code without exporting first and the managed server comes up with no
 credentials, `n8n_*` tools fail on auth, and nothing explains why.
 
-Approve both MCP servers when Claude Code prompts. Check with `/mcp`.
+Approve the MCP servers when Claude Code prompts. Check with `/mcp`.
 
 ## 5. Verify
 
-Paste [../AI_SETUP_PROMPT.md](../AI_SETUP_PROMPT.md) into the session. Claude
-checks prerequisites, both servers, and instance reachability, then builds and
-deletes a disposable probe workflow to prove the loop works end to end.
+Paste [../AI_SETUP_PROMPT.md](../AI_SETUP_PROMPT.md) into the session. The agent
+checks prerequisites, the servers, and instance reachability, then builds and
+archives a disposable probe workflow to prove the loop works end to end.
 
 By hand instead:
 

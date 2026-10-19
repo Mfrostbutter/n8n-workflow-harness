@@ -17,7 +17,7 @@ Both projects are by **Romuald Członkowski**, both MIT licensed:
 
 | Component | Upstream | License |
 |---|---|---|
-| `n8n-mcp` (both MCP servers) | https://github.com/czlonkowski/n8n-mcp | MIT |
+| `n8n-mcp` (the `n8n-docs` and `n8n` servers) | https://github.com/czlonkowski/n8n-mcp | MIT |
 | `n8n-skills` (15 vendored skills) | https://github.com/czlonkowski/n8n-skills | MIT |
 
 `@n8n/cli` and `@n8n/workflow-sdk` are n8n GmbH packages (Sustainable Use

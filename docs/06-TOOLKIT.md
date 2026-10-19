@@ -154,8 +154,9 @@ staging or prod. [11-EDITORS.md](11-EDITORS.md) has the wiring per tool;
 
 Preflight over the whole clone: Node version, git, `.mcp.json` shape (including
 that `n8n-docs` carries no credentials), the n8n-mcp pin against what is
-actually installed, the node database, a real MCP handshake, all twenty skills
-and their `SKILL.md` files, both hooks executing cleanly, every toolkit script
+actually installed, the node database, a real MCP handshake, all twenty-three
+skills and their `SKILL.md` files, the generated agent configs, the hooks
+executing cleanly, every toolkit script
 parsing, and whether `.env` is exported or accidentally tracked.
 
 25 checks. `--fast` skips the handshake, the only slow one, since it loads the
@@ -210,7 +211,7 @@ if offline delivery is the point of your copy. Regenerate whenever the pin in
 ```
 
 Re-vendors the fifteen upstream skills wholesale from
-`czlonkowski/n8n-skills`. Never touches the five originals. Prints the upstream
+`czlonkowski/n8n-skills`. Never touches the eight originals. Prints the upstream
 commit so you can record it in `ATTRIBUTION.md`. Fails loudly if upstream has
 restructured and a skill it expects is gone.
 
