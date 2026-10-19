@@ -8,7 +8,7 @@ The full path, with the reasoning. For the fast version see
 
 | Need | Why | Check |
 |---|---|---|
-| Node 20+ and npm | Both MCP servers and the whole toolkit | `node --version` |
+| Node 20+ and npm | The n8n-mcp servers, the CLI and the whole toolkit | `node --version` |
 | Git | Rollback. Without it there is no undo | `git --version` |
 | Claude Code | The harness itself | `claude --version` |
 | n8n instance, public API on | Anything that touches a workflow | Settings → n8n API |
@@ -100,8 +100,8 @@ Claude Code prompts to approve project MCP servers on first use. Approve both.
 ```
 
 Checks Node version, git, `.mcp.json` shape (including that `n8n-docs` carries
-no credentials), all twenty skills and their `SKILL.md` files, both hooks
-executing cleanly, every toolkit script parsing, and whether `.env` is exported
+no credentials), all twenty-three skills and their `SKILL.md` files, the
+generated agent configs, the hooks executing cleanly, every toolkit script parsing, and whether `.env` is exported
 or accidentally tracked. Exit 0 and `RESULT: ok`, or exit 1 and `RESULT: BLOCKED`.
 
 No instance needed. Run it any time something feels wrong. It includes a real
@@ -134,7 +134,7 @@ If docs mode answers and managed mode fails on auth, go back to step 3. The
 fastest confirmation that credentials reached the server process:
 
 ```bash
-set -a; . ./.env; set +a; npm run smoke     # expect 25 tools, not 7
+set -a; . ./.env; set +a; npm run smoke     # expect 28 tools, not 7
 ```
 
 7 tools with `N8N_API_URL` set means the environment did not reach the server.
@@ -160,7 +160,9 @@ Against a scratch or dev instance, never a customer's prod:
 4. `n8n_create_workflow`
 5. `n8n_get_workflow` and inspect `connections`
 6. Execute it, read the execution back
-7. Delete it, and confirm the deletion
+7. Archive it: deactivate, rename with an `ARCHIVED-` prefix, confirm by
+   listing workflows. The guard denies delete calls; remove it from the UI
+   later if you want it gone.
 
 `examples/hello-set.json` is a minimal workflow that passes both the offline
 validator and `validate_workflow`, if you want a known-good starting point.

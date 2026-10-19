@@ -1,30 +1,32 @@
 # n8n workflow harness
 
-A Claude Code harness for building n8n workflows, built around
-**[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)**: twenty n8n skills, both
-n8n-mcp servers pinned as a real dependency, a deterministic toolkit, and the
-discipline that keeps a generated workflow from failing quietly in production.
+A coding-agent harness for building and promoting n8n workflows: twenty-three
+n8n skills, **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)** pinned as a
+real dependency next to n8n's own instance MCP server, the official `@n8n/cli`
+for promotions, a deterministic toolkit, and the discipline that keeps a
+generated workflow from failing quietly in production.
 
 Clone it, point it at a dev instance, and build. Everything is project-scoped,
 so it runs without touching your global editor configuration.
 
-**Works in Claude Code, VS Code with GitHub Copilot, Cursor, Windsurf, Codex,
-and any other MCP-capable client.** Config for each is already in the repo. The
-engine is a standard MCP server, so the schemas and validation are identical
-everywhere; see [docs/11-EDITORS.md](docs/11-EDITORS.md) for what differs.
+**Works in Claude Code, Codex, Cursor, VS Code with GitHub Copilot, Devin,
+JetBrains Junie, and any other MCP-capable client.** One contract (`AGENTS.md`),
+one MCP source (`.mcp.json`) fanned out per tool, one pre-tool guard. See
+[docs/11-EDITORS.md](docs/11-EDITORS.md) for what differs per tool.
 
 ```bash
 git clone <repo-url> n8n-workflow-harness
 cd n8n-workflow-harness
 ./setup.sh                      # Windows: .\setup.ps1 - installs n8n-mcp
 cp .env.example .env            # fill in your dev instance URL and API key
-set -a; . ./.env; set +a        # .mcp.json reads the process environment
-claude
+set -a; . ./.env; set +a        # every MCP config reads the process environment
+claude                          # or codex, cursor, code .
 ```
 
-Then paste [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) into that session and Claude
-will verify the whole loop end to end, including a disposable probe workflow it
-deletes afterwards. Prefer to drive it yourself: [docs/02-SETUP.md](docs/02-SETUP.md).
+Then paste [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) into that session and the
+agent will verify the whole loop end to end, including a disposable probe
+workflow it archives afterwards (the guard denies deletes; remove it from the
+UI). Prefer to drive it yourself: [docs/02-SETUP.md](docs/02-SETUP.md).
 
 New here? [docs/01-QUICKSTART.md](docs/01-QUICKSTART.md) is the fifteen-minute path.
 
@@ -39,15 +41,17 @@ even deploy. They fail later, quietly, in the customer's tenant.
 This harness closes that gap three ways:
 
 1. **Live schemas instead of recall.** `n8n-mcp` serves real node schemas,
-   validators, and 2,700+ templates from a prebuilt database of 2,500+ nodes.
-   This is the component that makes builds and validation correct, so the
-   harness pins it and verifies it rather than hoping npm resolves it.
+   validators, and 2,700+ templates from a prebuilt database of 3,100+ nodes,
+   and the instance's own MCP server owns the build loop, version history and
+   publish. The harness pins the package and verifies both rather than hoping
+   npm resolves it.
 2. **Skills that fire before the mistake.** Twenty-three skills carry the rules for
    expressions, node configuration, Code nodes, AI agents, error handling, and
    the field-discovered traps that look like success.
 3. **Verification that does not trust the model.** A Node-only toolkit that
-   checks whether the repo and the live instance actually agree, plus hooks that
-   put the validate-and-verify rule in front of every instance write.
+   checks whether the repo and the live instance actually agree, lints a
+   workflow before it moves environments, and a guard that denies deletes and
+   asks before any write to staging or prod, in every editor that runs hooks.
 
 ## Layout
 
@@ -155,18 +159,20 @@ points at the specialist that owns the decision.
 | `n8n-self-hosting` | Deploying n8n itself: Docker Compose, Caddy, queue mode |
 | `n8n-node-dev` | Custom node packaging, the every-worker rule, air-gapped install |
 
-Fifteen are vendored from the upstream `n8n-skills` pack; five are original to
+Fifteen are vendored from the upstream `n8n-skills` pack; eight are original to
 this harness. See [ATTRIBUTION.md](ATTRIBUTION.md) and
 [docs/04-SKILLS.md](docs/04-SKILLS.md).
 
-## n8n-mcp: the engine
+## The engine: n8n-mcp and the official instance MCP
 
-Everything correct about the builds comes from
+Node schemas, validators and templates come from
 **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)** by Romuald Członkowski
-(MIT). It is what replaces the model's stale recall with the truth for the n8n
-version you are actually on: 2,500+ node schemas, real validators, and 2,700+
-workflow templates, served from a prebuilt ~94 MB database that ships inside
-the package.
+(MIT): 3,100+ node schemas including community nodes, real validators, and
+2,700+ workflow templates, served from a prebuilt database that ships inside
+the package. The build loop, version history and diffs, publish, Agents and
+data tables come from the instance's own MCP server (`/mcp-server/http`, GA
+since n8n 2.31). Both, routed by task; the table is in
+[docs/03-MCP-SERVERS.md](docs/03-MCP-SERVERS.md).
 
 Without it, an LLM writes plausible n8n JSON. With it, it writes JSON that
 matches your instance.
@@ -188,22 +194,25 @@ bug unreproducible and an audit meaningless.
 so the working directory does not matter, and printing an actionable message if
 `npm ci` was skipped.
 
-### Two servers, one package
+### Three servers
 
 `n8n-mcp` changes behaviour depending on whether it can see instance
-credentials, so it is registered twice. Verified tool counts:
+credentials, so it is registered twice; the third server is the instance's own.
+Verified tool counts:
 
 | Server | Credentials | Tools | Serves | Risk |
 |---|---|---|---|---|
 | `n8n-docs` | none | 7 | Node schemas, validators, templates | Safe anywhere. Cannot reach an instance |
-| `n8n` | `N8N_API_URL` + `N8N_API_KEY` | 25 (7 + 18) | Workflow CRUD, executions, credentials, audit | Writes to a real instance |
+| `n8n` | `N8N_API_URL` + `N8N_API_KEY` | 28 (7 + 21) | Workflow CRUD, executions, credentials, folders, data tables, audit | Writes to a real instance |
+| `n8n-official` | `N8N_API_URL` + `N8N_MCP_ACCESS_TOKEN` | varies by n8n version | Workflow SDK build loop, versions and diffs, publish, Agents, data tables | Writes to a real instance |
 
 There is no separate `n8n-docs-mcp` package on npm. "Docs mode" is this same
 package started without an API URL, which is what makes it safe to leave on.
 
-`.mcp.json` expands `${N8N_API_URL}` from the **process environment**, not from
-`.env` on disk. That is the single most common setup failure: launch with
-`set -a; . ./.env; set +a; claude` or the managed server starts credential-less.
+Every MCP config expands `${N8N_API_URL}` from the **process environment**, not
+from `.env` on disk. That is the single most common setup failure: launch with
+`set -a; . ./.env; set +a; claude` (or your editor) or the instance servers
+start credential-less.
 
 ### Proving it works
 
@@ -213,12 +222,12 @@ npm run smoke        # real MCP handshake: server version, tool counts
 
 It completes an `initialize` and `tools/list` against the server and checks all
 seven documentation tools are present. With `N8N_API_URL` exported it also
-asserts the 18 `n8n_*` instance tools appeared, which is the fastest way to
+asserts the 21 `n8n_*` instance tools appeared, which is the fastest way to
 confirm the credentials actually reached the server process.
 
 Install paths (local pinned, npx fallback, air-gapped, Docker, from source),
-the full tool inventory, and how this coexists with n8n's own instance-level
-MCP: [docs/03-MCP-SERVERS.md](docs/03-MCP-SERVERS.md).
+the full tool inventory, and which server owns which task:
+[docs/03-MCP-SERVERS.md](docs/03-MCP-SERVERS.md).
 
 ## Toolkit
 
@@ -233,6 +242,11 @@ truth when the model and reality disagree.
 | `./scripts/drift-check.sh [env]` | Whether `workflows/` and the live instance agree. Exit 1 on drift |
 | `./scripts/export-all.sh [env]` | Snapshot every workflow. The rollback point |
 | `./scripts/validate.sh <file>` | Offline structural checks on workflow JSON |
+| `./scripts/lint-workflow.sh <file or dir>` | Promotion lint: environment literals, nameless credentials, `$env`, tags, error workflow. Prints the credentials and variables the target needs |
+| `./scripts/wf-diff.sh <a> <b>` | What changed between two workflow files, ignoring canvas moves. `git diff` shows the same view |
+| `./scripts/node-inventory.sh <dir>` | Node types and typeVersions in use, the input to an upgrade plan |
+| `./scripts/gen-agent-configs.sh [--check]` | Regenerate the per-tool configs from `AGENTS.md`, `.mcp.json` and the skills |
+| `npx n8n-cli ...` | The official client CLI: promotions, packages, source control, audit |
 | `./scripts/verify-setup.sh` | Preflight over this whole clone, including a server handshake |
 | `npm run smoke` | Real MCP handshake against n8n-mcp: version and tool counts |
 | `./scripts/vendor-mcp.sh` | Pack n8n-mcp for an air-gapped install |
@@ -247,18 +261,19 @@ A snapshot taken while the repo and the instance disagreed is not a rollback
 point. That is why the order is drift-check, then export, then change.
 
 ```bash
-node --test tests/tools.test.mjs tests/instance.test.mjs   # 44 tests
+npm test        # toolkit, instance and guard tests
 ```
 
 `instance.test.mjs` runs the real HTTP paths against a fake n8n API server, so
 the instance-touching tools are covered offline with no instance involved.
+`guard.test.mjs` is the hook contract.
 
 ## Hooks
 
 Upstream ships its skills as a plugin whose hooks nudge you at the moment of
 decision. This repo vendors the skills instead, so it carries its own small
-hook layer to keep that behavior. Both fail open: an error means no reminder,
-never a blocked call.
+hook layer to keep that behavior. The two reminder hooks fail open: an error
+means no reminder, never a blocked call.
 
 - **SessionStart** injects the harness contract, and names the instance the
   managed server is pointed at, so the rules are loaded from turn one instead
@@ -266,8 +281,15 @@ never a blocked call.
 - **PreToolUse** on instance-mutating tools reminds you to read `connections`
   back after a write, warns that activation caches the trigger registration,
   and flags a credential write as needing the target confirmed first.
+- **The guard** (`scripts/guard-pre-tool.mjs`) denies delete tools and delete
+  commands and names the archive alternative; asks before a deploy or promotion
+  to staging or prod, a `source-control pull`, a CLI activate, or any workflow
+  write while the session points at the prod URL. Same script in Claude Code,
+  Codex, Cursor, Copilot and Devin. Tested in the Claude Code payload shape.
 
-Disable them by removing the `hooks` block from `.claude/settings.json`.
+The reminders can be disabled by removing them from the `hooks` block in
+`.claude/settings.json`. Keep the guard; for an organisation-wide version that
+a user cannot edit, see `docs/managed-settings.example.json`.
 
 ## Editors and agents
 
@@ -297,7 +319,7 @@ Promotion paths, managed settings, CI and hand-over: [docs/12-ENTERPRISE.md](doc
 | Doc | Read it when |
 |---|---|
 | [01-QUICKSTART.md](docs/01-QUICKSTART.md) | You want to be building in fifteen minutes |
-| [02-SETUP.md](docs/02-SETUP.md) | Full setup, both servers, verification |
+| [02-SETUP.md](docs/02-SETUP.md) | Full setup, the three servers, verification |
 | [03-MCP-SERVERS.md](docs/03-MCP-SERVERS.md) | What each server serves, tool inventory, official n8n MCP |
 | [04-SKILLS.md](docs/04-SKILLS.md) | Which skill owns a decision, and how routing works |
 | [05-BUILD-LOOP.md](docs/05-BUILD-LOOP.md) | The build sequence, in order, with the checks |
@@ -306,15 +328,18 @@ Promotion paths, managed settings, CI and hand-over: [docs/12-ENTERPRISE.md](doc
 | [08-SECURITY.md](docs/08-SECURITY.md) | Credentials, data boundaries, what never enters the repo |
 | [09-TROUBLESHOOTING.md](docs/09-TROUBLESHOOTING.md) | It succeeded but nothing happened |
 | [10-MAINTENANCE.md](docs/10-MAINTENANCE.md) | Refreshing skills, bumping the pinned server, the plugin path |
-| [11-EDITORS.md](docs/11-EDITORS.md) | Setup for VS Code, Cursor, Windsurf, Codex, and other MCP clients |
+| [11-EDITORS.md](docs/11-EDITORS.md) | Claude Code, Codex, Cursor, Copilot, Devin, Junie, and other MCP clients |
+| [12-ENTERPRISE.md](docs/12-ENTERPRISE.md) | Promotion paths, source control, managed settings, secrets, audit, hand-over |
 
 ## Requirements
 
-- Node 20+ and npm (the toolkit and both MCP servers need it)
+- Node 20+ and npm (the toolkit, the CLI and the two n8n-mcp servers need it)
 - Git
-- An MCP-capable editor: Claude Code, VS Code with Copilot (Agent mode), Cursor,
-  Windsurf, Codex, or another MCP client
+- An MCP-capable agent: Claude Code, Codex, Cursor, VS Code with Copilot (Agent
+  mode), Devin, JetBrains Junie, or another MCP client
 - An n8n instance with the public API enabled, and an API key. Dev, not prod.
+  An instance-level MCP access token for the official server (optional).
+  Promotions need n8n 2.40+ and a license.
 - ~170 MB of disk for `node_modules`, most of it n8n-mcp's node database.
   `node_modules/` is gitignored; only the lockfile is committed.
 
@@ -327,13 +352,16 @@ run natively under PowerShell, so nothing is bash-only.
 
 ## Licence and credit
 
-This harness is MIT ([LICENSE](LICENSE)). The two components that do the real
-work are both MIT-licensed and both by **Romuald Członkowski**:
+This harness is MIT ([LICENSE](LICENSE)). Two of the components that do the
+real work are MIT-licensed and both by **Romuald Członkowski**:
 
-- **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)** — the server behind every
+- **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)**, the server behind every
   schema lookup and validation call in this repo
-- **[n8n-skills](https://github.com/czlonkowski/n8n-skills)** — fifteen of the
-  twenty skills
+- **[n8n-skills](https://github.com/czlonkowski/n8n-skills)**, fifteen of the
+  twenty-three skills
+
+`@n8n/cli` and `@n8n/workflow-sdk` are n8n GmbH packages under the Sustainable
+Use License, pinned as dependencies and not redistributed here.
 
 If you depend on them, consider [sponsoring](https://github.com/sponsors/czlonkowski).
 Full credit in [ATTRIBUTION.md](ATTRIBUTION.md), full licence texts in

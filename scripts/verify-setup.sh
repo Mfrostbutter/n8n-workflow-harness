@@ -52,8 +52,8 @@ if [ -f .mcp.json ] && command -v node >/dev/null 2>&1; then
       process.exit(3);
     }
     const usesLauncher = want.every(n => (s[n].args||[]).some(a => String(a).includes("mcp-server.mjs")));
-    console.log("  ok    .mcp.json declares both servers, docs mode is credential-free");
-    if (usesLauncher) console.log("  ok    both servers use the pinned local install");
+    console.log("  ok    .mcp.json declares the n8n-mcp servers, docs mode is credential-free");
+    if (usesLauncher) console.log("  ok    both n8n-mcp servers use the pinned local install");
     else console.log("  note  .mcp.json is not using scripts/mcp-server.mjs (npx fallback?)");
   ' || FAIL=$((FAIL+1))
 fi

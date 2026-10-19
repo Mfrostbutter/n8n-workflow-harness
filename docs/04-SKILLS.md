@@ -69,9 +69,10 @@ Romuald Członkowski): `using-n8n-mcp-skills`, `n8n-mcp-tools-expert`,
 `n8n-code-tool`, `n8n-agents`, `n8n-binary-and-data`, `n8n-error-handling`,
 `n8n-multi-instance`, `n8n-self-hosting`, `n8n-subworkflows`.
 
-**Five original** to this harness, written from enterprise delivery work:
+**Eight original** to this harness, written from enterprise delivery work:
 `n8n-instance-ops`, `n8n-enterprise-delivery`, `n8n-node-dev`, `n8n-gotchas`,
-`n8n-canvas-docs` (adapted).
+`n8n-canvas-docs` (adapted), `n8n-promotion-pipeline`, `n8n-workflow-as-code`,
+`n8n-upgrade-plan`.
 
 Full credit: [../ATTRIBUTION.md](../ATTRIBUTION.md).
 
@@ -79,10 +80,10 @@ Full credit: [../ATTRIBUTION.md](../ATTRIBUTION.md).
 
 **Do not hand-edit a vendored skill.** `./scripts/refresh-skills.sh` replaces
 all fifteen wholesale, so your edit disappears at the next refresh with no
-warning. A change worth keeping goes into one of the five originals, or upstream
+warning. A change worth keeping goes into one of the eight originals, or upstream
 as a pull request.
 
-The five originals are yours to edit. Keep the frontmatter `description`
+The eight originals are yours to edit. Keep the frontmatter `description`
 specific: it is the entire basis for description-based activation, so a vague
 description means the skill does not fire when it should.
 
@@ -105,7 +106,7 @@ Upstream distributes the pack as a Claude Code plugin:
 This repo vendors so it clones and runs in a restricted environment with no
 plugin approval. If your environment allows the plugin and you would rather
 track upstream, install it and delete the fifteen vendored directories, keeping
-the five originals. Then do the dedupe pass below.
+the eight originals. Then do the dedupe pass below.
 
 ## Deduping against the official n8n skills
 

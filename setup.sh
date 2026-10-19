@@ -116,7 +116,7 @@ Next:
        set -a; . ./.env; set +a; claude
 
      .mcp.json reads N8N_API_URL from the process environment, not from the
-     file on disk. Approve both MCP servers when prompted.
+     file on disk. Approve the MCP servers when prompted.
   3. Confirm the instance is reachable:  ./scripts/doctor.sh
   4. Snapshot before changing anything:  ./scripts/export-all.sh && git add -A && git commit -m "baseline"
 

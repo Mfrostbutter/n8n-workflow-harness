@@ -25,7 +25,7 @@ Rules for this session:
   credential value. Refer to them by name only.
 - Do not create, modify, activate, or delete any workflow on any instance
   during setup, except the single disposable probe workflow in Phase 5, which
-  you delete before finishing.
+  you archive before finishing. Never call a delete tool; the guard denies it.
 - Never target a production instance. If the URL I give you looks like prod,
   stop and ask me to confirm before using it.
 - If a command fails, show me the actual error output. Do not guess at a cause
@@ -63,26 +63,29 @@ in this shell. Do not read the key's value.
 - Then STOP and wait for me. Do not continue to Phase 3 without credentials.
 
 PHASE 3 - MCP servers
-Re-run `npm run smoke` now that credentials are exported. It must report 25
-tools (7 documentation plus 18 instance). If it still reports 7, the environment
+Re-run `npm run smoke` now that credentials are exported. It must report 28
+tools (7 documentation plus 21 instance). If it still reports 7, the environment
 did not reach the server process: tell me, and do not proceed.
 
-Then confirm both servers from .mcp.json are connected. Two servers, one
-package, both running the pinned n8n-mcp via scripts/mcp-server.mjs:
+Then confirm the servers from .mcp.json are connected. Two run the pinned
+n8n-mcp via scripts/mcp-server.mjs; the third is the instance's own:
 - n8n-docs: node schemas, validation, templates. No instance credentials.
 - n8n: workflow CRUD and executions against N8N_API_URL. Touches a real
   instance.
+- n8n-official: the instance's /mcp-server/http with N8N_MCP_ACCESS_TOKEN.
+  Optional; if the token is not set, say so and skip it.
 Verify docs mode by calling tools_documentation, then search_nodes for
 "webhook", then get_node on the Webhook node. Verify managed mode with
-n8n_health_check and n8n_list_workflows.
+n8n_health_check and n8n_list_workflows. Verify the official server, if
+configured, with get_instance_context.
 If a server is missing, tell me how to enable it for the editor I am actually
 using, and show me what you see:
 - Claude Code: approve the project .mcp.json when prompted; check /mcp
 - VS Code + Copilot: MCP: List Servers, and be in Agent mode, not Ask
 - Cursor: Settings > MCP
-- Windsurf / Codex: MCP config is global and needs an absolute path to
-  scripts/mcp-server.mjs (see docs/11-EDITORS.md)
-If only n8n-docs works, say so plainly rather than proceeding as if both do.
+- Codex: .codex/config.toml, export .env before launching
+- Devin, Junie, other clients: see docs/11-EDITORS.md
+If only n8n-docs works, say so plainly rather than proceeding as if the others do.
 
 PHASE 4 - Instance reality check
 Run ./scripts/doctor.sh and show me the output. Then tell me, explicitly:
@@ -107,22 +110,25 @@ result of each step:
   3. Construct a two-node workflow: a Manual Trigger into a Set node that
      outputs one static field. Nothing that reaches the network.
   4. validate_workflow on the JSON. Fix anything it reports.
-  5. n8n_create_workflow, named exactly "zz-harness-probe-DELETE-ME".
+  5. n8n_create_workflow, named exactly "zz-harness-probe".
   6. n8n_get_workflow and read back the connections object. Confirm out loud
      that the trigger is actually wired to the Set node. Validation passing is
      not proof of correct wiring.
   7. Execute it and read the execution data back. A 200 is not proof; the
      execution output is.
-  8. Delete it, and confirm the deletion by listing workflows.
+  8. Archive it: n8n_update_partial_workflow to rename it
+     "ARCHIVED-zz-harness-probe" and leave it inactive, then confirm by
+     listing workflows. Tell me to remove it from the UI if I want it gone.
 If any step fails, stop there and show me the error. A half-working loop that
 you report as working is worse than a clean failure.
 
 PHASE 6 - Report
 Give me a short status table: prerequisites, n8n-mcp install and version, skills,
-hooks (Claude Code only), docs MCP, managed MCP, instance reachability,
-end-to-end loop. Mark each pass or fail. Name which editor you are running in,
-and if it is not Claude Code, note that the skills do not auto-load and I should
-name the SKILL.md file in prompts. Then list,
+hooks and the guard (per editor), docs MCP, managed MCP, official MCP (if a
+token was given), instance reachability, end-to-end loop. Mark each pass or
+fail. Name which editor you are running in, and whether it discovered the
+skills in .agents/skills/ (Claude Code reads the links in .claude/skills/). If
+it did not, I should name the SKILL.md file in prompts. Then list,
 in priority order, anything I still need to do myself, and name the doc under
 docs/ that covers each one. Do not pad the report. If everything passed, say so
 in one line.

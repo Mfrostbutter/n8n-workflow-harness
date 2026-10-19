@@ -5,7 +5,7 @@ Read in order if you are new; jump straight in if you are not.
 | Doc | Read it when |
 |---|---|
 | [01-QUICKSTART.md](01-QUICKSTART.md) | You want to be building in fifteen minutes |
-| [02-SETUP.md](02-SETUP.md) | Full setup: prerequisites, both servers, verification |
+| [02-SETUP.md](02-SETUP.md) | Full setup: prerequisites, the three servers, verification |
 | [03-MCP-SERVERS.md](03-MCP-SERVERS.md) | What each server serves, tool inventory, official n8n MCP |
 | [04-SKILLS.md](04-SKILLS.md) | Which skill owns a decision, and how routing works |
 | [05-BUILD-LOOP.md](05-BUILD-LOOP.md) | The build sequence, in order, with the checks |
