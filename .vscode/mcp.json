@@ -2,13 +2,30 @@
   "inputs": [
     {
       "type": "promptString",
-      "id": "n8n-api-url",
-      "description": "n8n instance URL for workflow CRUD (dev, not prod). Leave blank for documentation-only mode."
+      "id": "N8N_API_URL",
+      "description": "N8N_API_URL (leave blank if not used)"
     },
     {
       "type": "promptString",
-      "id": "n8n-api-key",
-      "description": "n8n API key (Settings > n8n API). Stored by VS Code, never written to the repo.",
+      "id": "N8N_API_KEY",
+      "description": "N8N_API_KEY (leave blank if not used)",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "N8N_CF_CLIENT_ID",
+      "description": "N8N_CF_CLIENT_ID (leave blank if not used)"
+    },
+    {
+      "type": "promptString",
+      "id": "N8N_CF_CLIENT_SECRET",
+      "description": "N8N_CF_CLIENT_SECRET (leave blank if not used)",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "N8N_MCP_ACCESS_TOKEN",
+      "description": "N8N_MCP_ACCESS_TOKEN (leave blank if not used)",
       "password": true
     }
   ],
@@ -16,23 +33,38 @@
     "n8n-docs": {
       "type": "stdio",
       "command": "node",
-      "args": ["${workspaceFolder}/scripts/mcp-server.mjs"],
+      "args": [
+        "scripts/mcp-server.mjs"
+      ],
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
-        "DISABLE_CONSOLE_OUTPUT": "true"
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_MCP_TELEMETRY_DISABLED": "true"
       }
     },
     "n8n": {
       "type": "stdio",
       "command": "node",
-      "args": ["${workspaceFolder}/scripts/mcp-server.mjs"],
+      "args": [
+        "scripts/mcp-server.mjs"
+      ],
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
         "DISABLE_CONSOLE_OUTPUT": "true",
-        "N8N_API_URL": "${input:n8n-api-url}",
-        "N8N_API_KEY": "${input:n8n-api-key}"
+        "N8N_API_URL": "${input:N8N_API_URL}",
+        "N8N_API_KEY": "${input:N8N_API_KEY}",
+        "N8N_CF_CLIENT_ID": "${input:N8N_CF_CLIENT_ID}",
+        "N8N_CF_CLIENT_SECRET": "${input:N8N_CF_CLIENT_SECRET}",
+        "N8N_MCP_TELEMETRY_DISABLED": "true"
+      }
+    },
+    "n8n-official": {
+      "type": "http",
+      "url": "${input:N8N_API_URL}/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer ${input:N8N_MCP_ACCESS_TOKEN}"
       }
     }
   }

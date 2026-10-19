@@ -3,3 +3,7 @@
 *.mjs text eol=lf
 *.png binary
 *.jpg binary
+
+# Semantic diffs for workflow JSON. setup.sh sets the textconv:
+#   git config diff.n8n-workflow.textconv "node scripts/wf-textconv.mjs"
+workflows/**/*.json diff=n8n-workflow

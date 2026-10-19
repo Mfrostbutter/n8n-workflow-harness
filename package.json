@@ -2,23 +2,27 @@
   "name": "n8n-workflow-harness",
   "version": "1.0.0",
   "private": true,
-  "description": "Claude Code harness for building n8n workflows: skills, both n8n-mcp servers, and a deterministic toolkit",
+  "description": "Harness for building and promoting n8n workflows with coding agents: skills, both n8n-mcp servers plus the official instance MCP, the official CLI and SDK, and a deterministic toolkit",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "n8n-mcp": "2.73.0"
+    "@n8n/cli": "0.22.0",
+    "@n8n/workflow-sdk": "0.36.5",
+    "n8n-mcp": "2.94.3"
   },
   "scripts": {
     "verify": "./scripts/verify-setup.sh",
-    "test": "node --test tests/tools.test.mjs tests/instance.test.mjs",
+    "test": "node --test tests/tools.test.mjs tests/instance.test.mjs tests/guard.test.mjs",
     "doctor": "node scripts/doctor.mjs",
     "drift": "node scripts/drift-check.mjs",
     "export": "node scripts/export-all.mjs",
     "smoke": "node scripts/mcp-smoke.mjs",
     "setup": "./setup.sh",
-    "gen:editors": "node scripts/gen-editor-configs.mjs",
-    "check:editors": "node scripts/gen-editor-configs.mjs --check"
+    "gen:agents": "node scripts/gen-agent-configs.mjs",
+    "check:agents": "node scripts/gen-agent-configs.mjs --check",
+    "lint": "node scripts/lint-workflow.mjs workflows --require-tags",
+    "inventory": "node scripts/node-inventory.mjs workflows"
   }
 }

@@ -52,7 +52,7 @@ if ($GlobalSkills) {
   $dest = Join-Path $base 'skills'
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   if (-not $DryRun) { New-Item -ItemType Directory -Force -Path $dest | Out-Null }
-  Get-ChildItem -Directory '.claude/skills' | ForEach-Object {
+  Get-ChildItem -Directory '.agents/skills' | ForEach-Object {
     $target = Join-Path $dest $_.Name
     if ($DryRun) { Note "would: install $($_.Name)"; return }
     if (Test-Path $target) {

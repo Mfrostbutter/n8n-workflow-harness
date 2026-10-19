@@ -105,23 +105,23 @@ fi
 
 echo
 echo "== skills"
-if [ -d .claude/skills ]; then
-  N="$(find .claude/skills -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')"
-  [ "$N" -eq 20 ] && ok "20 skills installed" || note "$N skill directories (expected 20)"
+if [ -d .agents/skills ]; then
+  N="$(find .agents/skills -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')"
+  [ "$N" -eq 23 ] && ok "23 skills installed" || note "$N skill directories (expected 23)"
   MISSING=""
   for s in using-n8n-mcp-skills n8n-mcp-tools-expert n8n-instance-ops n8n-gotchas \
            n8n-enterprise-delivery n8n-node-dev n8n-canvas-docs; do
-    [ -f ".claude/skills/$s/SKILL.md" ] || MISSING="$MISSING $s"
+    [ -f ".agents/skills/$s/SKILL.md" ] || MISSING="$MISSING $s"
   done
   [ -z "$MISSING" ] && ok "router and harness-original skills present" \
     || bad "missing SKILL.md for:$MISSING"
   BAD=""
-  for d in .claude/skills/*/; do
+  for d in .agents/skills/*/; do
     [ -f "$d/SKILL.md" ] || BAD="$BAD $(basename "$d")"
   done
   [ -z "$BAD" ] && ok "every skill directory has a SKILL.md" || bad "no SKILL.md in:$BAD"
 else
-  bad ".claude/skills/ missing"
+  bad ".agents/skills/ missing"
 fi
 
 echo
@@ -129,15 +129,14 @@ echo "== editor support"
 for f in .mcp.json .vscode/mcp.json .cursor/mcp.json; do
   [ -f "$f" ] && ok "$f present" || bad "$f missing"
 done
-for f in AGENTS.md .github/copilot-instructions.md .cursor/rules/n8n-harness.mdc \
-         .windsurf/rules/n8n-harness.md; do
-  [ -f "$f" ] || bad "$f missing (run: npm run gen:editors)"
+for f in AGENTS.md CLAUDE.md .codex/config.toml .aiassistant/rules/engagement.md; do
+  [ -f "$f" ] || bad "$f missing (run: npm run gen:agents)"
 done
-if [ -f scripts/gen-editor-configs.mjs ]; then
-  if node scripts/gen-editor-configs.mjs --check >/dev/null 2>&1; then
-    ok "editor instruction files match CLAUDE.md and the installed skills"
+if [ -f scripts/gen-agent-configs.mjs ]; then
+  if node scripts/gen-agent-configs.mjs --check >/dev/null 2>&1; then
+    ok "generated agent configs match AGENTS.md, .mcp.json and .agents/skills/"
   else
-    bad "editor instruction files are stale. Run: npm run gen:editors"
+    bad "generated agent configs are stale. Run: npm run gen:agents"
   fi
 fi
 # VS Code uses "servers"; Cursor and Claude Code use "mcpServers". Mixing them

@@ -1,0 +1,31 @@
+# Workflow checks. Validation and lint run on every push and merge request with
+# no instance access. Drift runs from a scheduled pipeline against the dev
+# instance and needs two CI variables (masked): N8N_API_URL_DEV, N8N_API_KEY_DEV.
+# Using GitHub instead: delete this file and keep .github/workflows/.
+image: node:22
+
+stages: [check, drift]
+
+validate:
+  stage: check
+  rules:
+    - changes: ['workflows/**/*', 'scripts/**/*']
+  script:
+    - |
+      for f in workflows/*/*.json; do
+        [ -e "$f" ] || continue
+        node scripts/validate.mjs "$f"
+      done
+    - |
+      for d in workflows/*/; do
+        ls "$d"*.json >/dev/null 2>&1 || continue
+        node scripts/lint-workflow.mjs "$d" --require-tags
+      done
+
+drift:
+  stage: drift
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+  script:
+    - node scripts/drift-check.mjs dev

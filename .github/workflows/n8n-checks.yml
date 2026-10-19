@@ -1,0 +1,62 @@
+# Workflow checks. Validation and lint run on every push and pull request with
+# no instance access. Drift runs on a schedule against the dev instance and
+# needs two repository secrets: N8N_API_URL_DEV and N8N_API_KEY_DEV.
+# Using GitLab instead: delete this directory and keep .gitlab-ci.yml.
+name: n8n checks
+
+on:
+  push:
+    paths: ['workflows/**', 'scripts/**', '.github/workflows/n8n-checks.yml']
+  pull_request:
+    paths: ['workflows/**', 'scripts/**']
+  schedule:
+    - cron: '17 6 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Structural validation
+        run: |
+          set -e
+          found=0
+          for f in workflows/*/*.json; do
+            [ -e "$f" ] || continue
+            found=1
+            node scripts/validate.mjs "$f"
+          done
+          [ "$found" = 1 ] || echo "no workflow JSON yet"
+      - name: Promotion lint
+        run: |
+          for d in workflows/*/; do
+            ls "$d"*.json >/dev/null 2>&1 || continue
+            node scripts/lint-workflow.mjs "$d" --require-tags
+          done
+      - name: Semantic diff of changed workflows
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          for f in $(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'workflows/*/*.json'); do
+            [ -e "$f" ] || { echo "removed: $f"; continue; }
+            git show "origin/${{ github.base_ref }}:$f" > /tmp/base.json 2>/dev/null || { echo "new: $f"; continue; }
+            echo "== $f"; node scripts/wf-diff.mjs /tmp/base.json "$f" || true
+          done
+
+  drift:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      N8N_API_URL_DEV: ${{ secrets.N8N_API_URL_DEV }}
+      N8N_API_KEY_DEV: ${{ secrets.N8N_API_KEY_DEV }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Repo versus dev instance
+        run: node scripts/drift-check.mjs dev

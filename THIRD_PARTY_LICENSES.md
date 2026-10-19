@@ -7,9 +7,9 @@ reproduced here in full, as its license requires.
 
 ## n8n-mcp
 
-Both MCP servers configured in `.mcp.json` run the `n8n-mcp` npm package
-(pinned to 2.73.0). It is fetched at runtime by `npx` and is not vendored into
-this repository.
+The `n8n-docs` and `n8n` servers in `.mcp.json` run the `n8n-mcp` npm package
+(pinned to 2.94.3 in `package.json`, installed by `npm ci`). It is not vendored
+into this repository.
 
 Upstream: https://github.com/czlonkowski/n8n-mcp
 
@@ -38,7 +38,7 @@ Upstream: https://github.com/czlonkowski/n8n-mcp
 
 ## n8n-skills
 
-Fifteen of the twenty skills under `.claude/skills/` are vendored, unmodified,
+Fifteen of the twenty-three skills under `.agents/skills/` are vendored, unmodified,
 from the `n8n-skills` pack. See ATTRIBUTION.md for the exact list.
 
 Upstream: https://github.com/czlonkowski/n8n-skills
@@ -64,3 +64,17 @@ Upstream: https://github.com/czlonkowski/n8n-skills
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
+
+---
+
+## @n8n/cli and @n8n/workflow-sdk
+
+`package.json` pins `@n8n/cli` (0.22.0) and `@n8n/workflow-sdk` (0.36.5),
+installed by `npm ci` and not vendored. Both are published by n8n GmbH under
+the Sustainable Use License, with the `@n8n/workflow-sdk` package also carrying
+the n8n Enterprise License terms for enterprise features. Full text:
+https://github.com/n8n-io/n8n/blob/master/LICENSE.md and
+https://github.com/n8n-io/n8n/blob/master/LICENSE_EE.md. Use inside your own
+organisation to build and promote your own workflows is within the license;
+redistribution of either package as part of a product is not covered by this
+harness and needs your own review.

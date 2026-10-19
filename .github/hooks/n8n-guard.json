@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "node scripts/guard-pre-tool.mjs",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

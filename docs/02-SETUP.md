@@ -40,10 +40,11 @@ installs offline from there instead.
 
 It does **not** write credentials and does **not** contact an instance.
 
-`--global-skills` additionally copies the twenty skills into
+`--global-skills` additionally copies the twenty-three skills into
 `~/.claude/skills/` so they load in every project, backing up anything it
 replaces. You do not need this to use the harness: skills in
-`.claude/skills/` already load whenever Claude Code runs in this directory.
+`.agents/skills/` (linked into `.claude/skills/`) already load whenever Claude
+Code runs in this directory.
 Prefer project scope unless you specifically want n8n skills everywhere.
 
 ## 2. Credentials

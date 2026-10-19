@@ -7,17 +7,22 @@ credit in it, when the repo or the skills are copied, shared, or quoted.
 
 **n8n-mcp is the component this harness is built around.** Every node schema,
 every validation result, and every template comes from it. It is pinned in
-`package.json` (`n8n-mcp: 2.73.0`), locked in `package-lock.json` with its
+`package.json` (`n8n-mcp: 2.94.3`), locked in `package-lock.json` with its
 `sha512` integrity hash, and installed into `node_modules/` by `npm ci` — so it
 is a reviewed, auditable dependency rather than a runtime download.
 
-Fifteen of the twenty skills in `.claude/skills/` are the **n8n-skills** pack.
+Fifteen of the twenty-three skills in `.agents/skills/` are the **n8n-skills** pack
+(v1.35.0, upstream commit 19cd793, refreshed 2026-10-19).
 Both projects are by **Romuald Członkowski**, both MIT licensed:
 
 | Component | Upstream | License |
 |---|---|---|
 | `n8n-mcp` (both MCP servers) | https://github.com/czlonkowski/n8n-mcp | MIT |
 | `n8n-skills` (15 vendored skills) | https://github.com/czlonkowski/n8n-skills | MIT |
+
+`@n8n/cli` and `@n8n/workflow-sdk` are n8n GmbH packages (Sustainable Use
+License), pinned in `package.json` for the promotion pipeline and the
+workflow-as-code skill.
 
 Full license texts in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 

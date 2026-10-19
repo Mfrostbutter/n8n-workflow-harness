@@ -25,16 +25,38 @@
       "mcp__n8n-docs__validate_workflow",
       "mcp__n8n-docs__search_templates",
       "mcp__n8n-docs__get_template",
-      "mcp__n8n-docs__tools_documentation"
+      "mcp__n8n-docs__tools_documentation",
+      "Bash(./scripts/lint-workflow.sh:*)",
+      "Bash(./scripts/wf-diff.sh:*)",
+      "Bash(./scripts/node-inventory.sh:*)",
+      "Bash(./scripts/gen-agent-configs.sh:*)",
+      "mcp__n8n-official__get_workflow_sdk_reference",
+      "mcp__n8n-official__get_workflow_best_practices",
+      "mcp__n8n-official__search_nodes",
+      "mcp__n8n-official__get_node_types",
+      "mcp__n8n-official__validate_workflow",
+      "mcp__n8n-official__validate_node_config",
+      "mcp__n8n-official__get_workflow_details",
+      "mcp__n8n-official__search_workflows",
+      "mcp__n8n-official__get_workflow_history",
+      "mcp__n8n-official__get_workflow_versions_diff"
     ],
     "deny": [
       "Read(**/.env)",
       "Read(**/.env.*)",
       "Bash(git push --force:*)",
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "mcp__n8n__n8n_delete_workflow",
+      "mcp__n8n-official__delete_data_table",
+      "mcp__n8n-official__delete_data_table_column",
+      "mcp__n8n-official__delete_agent"
     ]
   },
-  "enabledMcpjsonServers": ["n8n-docs", "n8n"],
+  "enabledMcpjsonServers": [
+    "n8n-docs",
+    "n8n",
+    "n8n-official"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -54,6 +76,16 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-n8n-write.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-pre-tool.mjs\"",
             "timeout": 10
           }
         ]

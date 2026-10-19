@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-10-19
+
+Enterprise delivery. One contract for every agent, the official n8n MCP server
+alongside the community one, a promotion pipeline over the official CLI, and a
+guard that works in every editor that runs hooks.
+
+- `AGENTS.md` is the contract; `CLAUDE.md` is `@AGENTS.md` plus a Claude-only
+  section. Replaces the generated `.github/copilot-instructions.md`,
+  `.cursor/rules/` and `.windsurf/rules/` copies, since Codex, Cursor, Copilot,
+  Devin, Junie and Claude Code all read `AGENTS.md` natively.
+- Skills move to `.agents/skills/` (23, up from 20) and are linked into
+  `.claude/skills/` by `scripts/gen-agent-configs.mjs`, which also fans
+  `.mcp.json` out to `.vscode/mcp.json`, `.cursor/mcp.json` and
+  `.codex/config.toml`. `npm run gen:agents` / `check:agents` replace
+  `gen:editors` / `check:editors`.
+- New skills: `n8n-promotion-pipeline` (n8n Promotions over `@n8n/cli`),
+  `n8n-workflow-as-code` (`@n8n/workflow-sdk`), `n8n-upgrade-plan`.
+  `n8n-enterprise-delivery` rewritten for Promotions versus source control.
+- Third MCP server `n8n-official`: the instance's own `/mcp-server/http`, for
+  the Workflow SDK build loop, version history, publish, Agents and data tables.
+  `N8N_MCP_ACCESS_TOKEN` in `.env.example`.
+- `n8n-mcp` 2.73.0 → 2.94.3 (2.73 cannot write to n8n ≥ 2.36); telemetry
+  disabled in every config. `@n8n/cli` 0.22.0 and `@n8n/workflow-sdk` 0.36.5
+  pinned.
+- Toolkit: `lint-workflow` (promotion lint and the credentials/variables
+  manifest), `wf-diff`, `wf-textconv` (wired as the git textconv by `setup.sh`),
+  `node-inventory`. `drift-check` names what differs per workflow.
+- `scripts/guard-pre-tool.mjs`: denies delete tools and commands, asks before a
+  deploy or promotion to staging or prod, a `source-control pull`, a CLI
+  activate, or any workflow write while `N8N_API_URL` is the prod URL. Wired
+  for Claude Code, Codex, Cursor, Copilot and Devin. Tested in the Claude Code
+  shape.
+- CI templates for GitHub and GitLab: validate and lint on push, drift on a
+  schedule. `docs/12-ENTERPRISE.md` and `docs/managed-settings.example.json`.
+- n8n-skills refreshed to v1.35.0 (upstream 19cd793).
+
 ## 2026-08-25 (c)
 
 Editor support beyond Claude Code. The engine is a standard MCP server, so the

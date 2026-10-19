@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "pre_run_command": [
+      {
+        "command": "node scripts/guard-pre-tool.mjs"
+      }
+    ],
+    "pre_mcp_tool_use": [
+      {
+        "command": "node scripts/guard-pre-tool.mjs"
+      }
+    ]
+  }
+}

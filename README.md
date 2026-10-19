@@ -42,7 +42,7 @@ This harness closes that gap three ways:
    validators, and 2,700+ templates from a prebuilt database of 2,500+ nodes.
    This is the component that makes builds and validation correct, so the
    harness pins it and verifies it rather than hoping npm resolves it.
-2. **Skills that fire before the mistake.** Twenty skills carry the rules for
+2. **Skills that fire before the mistake.** Twenty-three skills carry the rules for
    expressions, node configuration, Code nodes, AI agents, error handling, and
    the field-discovered traps that look like success.
 3. **Verification that does not trust the model.** A Node-only toolkit that
@@ -52,40 +52,48 @@ This harness closes that gap three ways:
 ## Layout
 
 ```
-CLAUDE.md                   the operating contract, loaded automatically
+AGENTS.md                   the operating contract, read by every agent
+CLAUDE.md                   @AGENTS.md plus Claude Code specifics
 AI_SETUP_PROMPT.md          paste-in prompt that sets up and verifies the harness
 setup.sh / setup.ps1        one-time wiring for a fresh clone
-package.json                pins n8n-mcp; package-lock.json locks it
-.mcp.json                   Claude Code: both MCP servers
-.vscode/mcp.json            VS Code + Copilot: same servers, prompts for the key
-.cursor/mcp.json            Cursor: same servers
+package.json                pins n8n-mcp, @n8n/cli, @n8n/workflow-sdk; package-lock.json locks them
+.mcp.json                   the three MCP servers (source of the per-tool configs)
+.vscode/mcp.json            VS Code + Copilot                             generated
+.cursor/mcp.json            Cursor                                        generated
+.codex/config.toml          Codex                                         generated
+.aiassistant/rules/         JetBrains Junie                               generated
 .mcp.npx.json               fallback config if you cannot run npm ci
-.env.example                instance URL and API key template
-AGENTS.md                   cross-tool contract (Codex, Cursor, Zed, ...)  generated
-.github/copilot-instructions.md   VS Code Copilot contract              generated
-.cursor/rules/              Cursor project rule                          generated
-.windsurf/rules/            Windsurf rule                                generated
+.env.example                instance URL, API key, MCP access token template
+.gitattributes              git diff on workflows/ shows behavior, not canvas moves
+.github/workflows/          CI: validate and lint on push, drift on a schedule (.gitlab-ci.yml too)
+.agents/skills/             23 skills, read by Codex, Cursor, Copilot, Devin, Junie
 .claude/
-  settings.json             permissions allowlist and hook registration
-  skills/                   20 skills, loaded automatically in this project
-  hooks/                    session contract injection, pre-write reminders
+  settings.json             permissions, hooks, the guard
+  skills/                   links into .agents/skills/                    generated
+  hooks/                    session contract injection, pre-write reminder
+.codex/ .cursor/ .github/hooks/ .devin/   guard hook configs per tool
 scripts/                    the deterministic toolkit (Node built-ins only)
+  guard-pre-tool.mjs        deny deletes, ask before prod writes; one script for every tool
+  lint-workflow.mjs         promotion lint and the credentials/variables manifest
+  wf-diff.mjs               semantic diff of two workflow files
+  wf-textconv.mjs           the git textconv
+  node-inventory.mjs        node types and typeVersions in use
+  gen-agent-configs.mjs     fan AGENTS.md, .mcp.json and the skills out per tool
   mcp-server.mjs            launches the pinned n8n-mcp, cwd-independent
   mcp-smoke.mjs             real MCP handshake against the server
   vendor-mcp.sh             pack n8n-mcp for an air-gapped install
-  gen-editor-configs.mjs    regenerate the editor contracts from CLAUDE.md
   refresh-skills.sh         re-vendor the 15 upstream skills
   verify-setup.sh           preflight over the whole clone
 workflows/{dev,staging,prod}/   workflow JSON: the source of truth
 examples/hello-set.json     minimal validated workflow
 docs/                       full documentation, see the index below
-tests/                      44 tests over the toolkit
+tests/                      toolkit, instance and guard tests
 ```
 
 ## The rules that matter
 
-Six rules earn their place by preventing a class of workflow that looks correct
-and breaks in production. They are in [CLAUDE.md](CLAUDE.md), so Claude loads
+Eight rules earn their place by preventing a class of workflow that looks correct
+and breaks in production. They are in [AGENTS.md](AGENTS.md), so every agent loads
 them every session, and the hooks repeat the sharpest ones at the moment of the
 write.
 
@@ -97,18 +105,21 @@ write.
 | A 200 is not proof | Confirm with a fresh execution and read the execution data |
 | Dev first | Promotion goes through your release path, never an ad-hoc write from a build session |
 | Secrets through the credential system | A Set node holding a token is a leak with extra steps |
+| Export before you change, drift-check before you trust | A snapshot taken while repo and instance disagreed is not a rollback point |
+| Archive, do not delete | The guard denies deletes and names the alternative |
 
 Working order for any change:
 
 ```
 drift-check → export-all + commit → change on dev → validate →
-get_workflow and read connections → execute → verify → promote → verify again
+get_workflow and read connections → execute → verify → lint-workflow →
+promote through the agreed path → verify again on the target
 ```
 
 ## Skills
 
-Twenty skills in `.claude/skills/`, loaded automatically when Claude Code runs
-in this directory. `using-n8n-mcp-skills` is the router: it fires first and
+Twenty-three skills in `.agents/skills/`, discovered by Codex, Cursor, Copilot,
+Devin and Junie, and linked into `.claude/skills/` for Claude Code. `using-n8n-mcp-skills` is the router: it fires first and
 points at the specialist that owns the decision.
 
 **Authoring**
@@ -138,6 +149,9 @@ points at the specialist that owns the decision.
 | `n8n-gotchas` | Behaviors that report success and do nothing. Read before a first build |
 | `n8n-multi-instance` | Targeting the right instance, and recovering from a misroute |
 | `n8n-enterprise-delivery` | Environments, RBAC, external secrets, scaling, air-gap, promotion |
+| `n8n-promotion-pipeline` | n8n Promotions over `@n8n/cli`: providers, connections, reviewed-commit apply, exit codes |
+| `n8n-workflow-as-code` | `@n8n/workflow-sdk`: JSON to code and back, validate, Mermaid |
+| `n8n-upgrade-plan` | Node inventory, typeVersion gaps, the plan for an instance upgrade |
 | `n8n-self-hosting` | Deploying n8n itself: Docker Compose, Caddy, queue mode |
 | `n8n-node-dev` | Custom node packaging, the every-worker rule, air-gapped install |
 
@@ -160,7 +174,7 @@ matches your instance.
 So this harness treats it as a **pinned dependency, not a runtime download**:
 
 ```json
-"dependencies": { "n8n-mcp": "2.73.0" }
+"dependencies": { "@n8n/cli": "0.22.0", "@n8n/workflow-sdk": "0.36.5", "n8n-mcp": "2.94.3" }
 ```
 
 `package-lock.json` is committed with the integrity hash, `npm ci` gives a
@@ -255,35 +269,28 @@ never a blocked call.
 
 Disable them by removing the `hooks` block from `.claude/settings.json`.
 
-## Editors
+## Editors and agents
 
-| | Claude Code | VS Code + Copilot | Cursor | Windsurf | Codex |
-|---|---|---|---|---|---|
-| n8n-mcp: schemas, validation, templates | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Instance tools: workflow CRUD, executions | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Toolkit (`drift-check`, `doctor`, …) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Contract loaded automatically | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 20 skills load on their own | ✅ | read on demand | read on demand | read on demand | read on demand |
-| Hook enforcement layer | ✅ | ❌ | ❌ | ❌ | ❌ |
+| | Claude Code | Codex | Cursor | VS Code + Copilot | Devin | Junie / Gemini |
+|---|---|---|---|---|---|---|
+| Three MCP servers | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Toolkit | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Contract (`AGENTS.md`) auto-loaded | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 23 skills discovered | ✅ | ✅ | ✅ | ✅ | ✅ | read on demand |
+| Pre-tool guard | ask | ask | deny | deny | deny | ❌ |
+| Session-start injection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-Everything needed to build a correct workflow works everywhere, because the
-engine is one pinned MCP server. Outside Claude Code you lose automatic skill
-loading and the hooks — both guidance, not capability. The generated instruction
-files carry an index of all twenty skills with their paths, so the agent knows
-what exists and where to read it; you just name the file in the prompt.
-
-Four editors want the same rules in four formats, so they are generated from
-one source instead of maintained as four copies:
+One contract, one MCP source, one guard. `AGENTS.md` is read natively by every
+tool in the table; `.mcp.json` is fanned out per tool; `scripts/guard-pre-tool.mjs`
+is wired into every tool that runs pre-tool hooks.
 
 ```bash
-npm run gen:editors      # regenerate from CLAUDE.md + the installed skills
-npm run check:editors    # exit 1 if any is stale
+npm run gen:agents      # regenerate the per-tool configs from AGENTS.md, .mcp.json, .agents/skills/
+npm run check:agents    # exit 1 if any is stale
 ```
 
-Edit `CLAUDE.md`, then regenerate. `verify-setup.sh` fails if they drift apart.
-
-Per-editor setup, including Windsurf and Codex (which keep MCP config globally,
-so they need absolute paths): [docs/11-EDITORS.md](docs/11-EDITORS.md).
+Per-tool setup and what each one cannot do: [docs/11-EDITORS.md](docs/11-EDITORS.md).
+Promotion paths, managed settings, CI and hand-over: [docs/12-ENTERPRISE.md](docs/12-ENTERPRISE.md).
 
 ## Documentation
 

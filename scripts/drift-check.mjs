@@ -6,7 +6,7 @@
 //        node tools/drift-check.mjs prod --quiet  exit code only, for CI
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { KIT_DIR, resolveTarget, api, apiAll, slugify, normalize, fail } from './lib.mjs';
+import { KIT_DIR, resolveTarget, api, apiAll, slugify, normalize, describeDiff, fail } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const quiet = args.includes('--quiet');
@@ -33,10 +33,16 @@ for (const f of readdirSync(dir)) {
   repo.set(parsed.name ?? f.replace(/\.json$/, ''), { file: f, wf: parsed });
 }
 
-// --- what the instance says
+// --- what the instance says. --tag <name> scopes the instance side to one tag, for a
+// shared instance where other teams' workflows are not this repo's business.
+const tagArg = process.argv.indexOf('--tag');
+const scopeTag = tagArg > -1 ? process.argv[tagArg + 1] : (process.env.DRIFT_SCOPE_TAG || '');
 const list = await apiAll(target, '/workflows');
+const workflowNameById = new Map(list.map((w) => [String(w.id), w.name]));
+const scoped = scopeTag ? list.filter((w) => (w.tags ?? []).some((t) => t.name === scopeTag)) : list;
+if (scopeTag) log(`scope: workflows tagged "${scopeTag}" (${scoped.length} of ${list.length} on the instance)\n`);
 const live = new Map();
-for (const { id, name } of list) {
+for (const { id, name } of scoped) {
   const { status, body } = await api(target, `/workflows/${id}`);
   if (status !== 200 || !body?.name) {
     log(`  WARN: could not read live workflow ${id} (HTTP ${status})`);
@@ -57,10 +63,10 @@ for (const [name, { file, wf }] of repo) {
 
   // Compare only what defines behavior. Ignore ids, timestamps, pin data,
   // and node positions: a node moved on the canvas is not a behavior change.
-  const a = normalize(wf);
-  const b = normalize(l);
+  const a = normalize(wf, { workflowNameById });
+  const b = normalize(l, { workflowNameById });
   if (JSON.stringify(a) !== JSON.stringify(b)) {
-    changed.push({ name, file, diff: describeDiff(a, b) });
+    changed.push({ name, file, diff: describeDrift(a, b) });
   }
   if ((wf.active ?? false) !== (l.active ?? false)) {
     activeMismatch.push({ name, repo: wf.active ?? false, live: l.active ?? false });
@@ -70,28 +76,11 @@ for (const name of live.keys()) {
   if (!repo.has(name)) onlyOnInstance.push({ name, file: `${slugify(name)}.json` });
 }
 
-/** Human-readable summary of where two normalized workflows differ. */
-function describeDiff(a, b) {
-  const out = [];
-  const an = new Map(a.nodes.map((n) => [n.name, n]));
-  const bn = new Map(b.nodes.map((n) => [n.name, n]));
-  for (const name of an.keys()) if (!bn.has(name)) out.push(`node only in repo: ${name}`);
-  for (const name of bn.keys()) if (!an.has(name)) out.push(`node only on instance: ${name}`);
-  for (const [name, node] of an) {
-    const other = bn.get(name);
-    if (!other) continue;
-    if (JSON.stringify(node.parameters) !== JSON.stringify(other.parameters)) {
-      out.push(`parameters differ: ${name}`);
-    }
-    if (node.typeVersion !== other.typeVersion) {
-      out.push(`typeVersion differs: ${name} (repo ${node.typeVersion}, instance ${other.typeVersion})`);
-    }
-    if (JSON.stringify(node.credentials ?? null) !== JSON.stringify(other.credentials ?? null)) {
-      out.push(`credentials differ: ${name}`);
-    }
-  }
-  if (JSON.stringify(a.connections) !== JSON.stringify(b.connections)) out.push('connections differ');
-  if (JSON.stringify(a.settings) !== JSON.stringify(b.settings)) out.push('settings differ');
+/** Repo-vs-instance wording over the shared comparator. */
+function describeDrift(a, b) {
+  const out = describeDiff(a, b)
+    .map((l) => l.replace(/^node only in A:/, 'node only in repo:').replace(/^node only in B:/, 'node only on instance:')
+      .replace(/\(A (\S+), B (\S+)\)/, '(repo $1, instance $2)'));
   return out.length ? out : ['differs in a field not itemized above'];
 }
 

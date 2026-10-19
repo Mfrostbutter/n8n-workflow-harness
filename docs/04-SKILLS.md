@@ -1,8 +1,8 @@
 # Skills
 
-Twenty skills live in `.claude/skills/`. Claude Code loads project skills
-automatically whenever it runs in this directory, so there is nothing to
-install.
+Twenty-three skills live in `.agents/skills/`, the directory Codex, Cursor,
+Copilot, Devin and Junie read natively. `npm run gen:agents` links them into
+`.agents/skills/` for Claude Code. Nothing to install.
 
 ## How routing works
 
@@ -44,6 +44,9 @@ explains it.
 | Work out why something "succeeded" and did nothing | `n8n-gotchas` |
 | Target the right instance among several | `n8n-multi-instance` |
 | Plan environments, RBAC, secrets, scaling, air-gap | `n8n-enterprise-delivery` |
+| `n8n-promotion-pipeline` | n8n Promotions over `@n8n/cli`: providers, connections, reviewed-commit apply, exit codes |
+| `n8n-workflow-as-code` | `@n8n/workflow-sdk`: JSON to code and back, validate, Mermaid |
+| `n8n-upgrade-plan` | Node inventory, typeVersion gaps, the plan for an instance upgrade |
 | Stand up or harden n8n itself | `n8n-self-hosting` |
 | Package or distribute a custom node | `n8n-node-dev` |
 
@@ -126,7 +129,7 @@ These five have no official equivalent and stay regardless:
 ## Checking what is loaded
 
 ```bash
-ls .claude/skills                  # 20 directories
+ls .agents/skills                  # 23 directories
 ./scripts/verify-setup.sh          # confirms all 20 and their SKILL.md files
 ```
 
