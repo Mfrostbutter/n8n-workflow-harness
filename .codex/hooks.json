@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/guard-pre-tool.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

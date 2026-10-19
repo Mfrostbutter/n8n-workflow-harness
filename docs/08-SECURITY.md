@@ -89,13 +89,17 @@ Resist widening the allowlist to stop prompts on writes. The prompt before
 
 ## Hooks
 
-Both hooks fail open: an error means no reminder, never a blocked call. They are
-guidance, not enforcement. Do not treat them as a control that prevents a bad
-write; they only make the rule visible at the right moment.
+The session and reminder hooks fail open: an error means no reminder, never a
+blocked call. `scripts/guard-pre-tool.mjs` is the one enforcing hook: it denies
+delete tools and asks before a write to a non-dev environment, and it also fails
+open on malformed input. A policy-level deny belongs in managed settings
+([12-ENTERPRISE.md](12-ENTERPRISE.md)), not in a hook a user can edit.
 
 ## Supply chain
 
-Both MCP servers run `n8n-mcp@2.73.0`, pinned. Pinning is deliberate: an
+The two community servers run `n8n-mcp@2.94.3`, pinned, with telemetry
+disabled (`N8N_MCP_TELEMETRY_DISABLED=true`). The third server is the instance's
+own and runs nothing locally. Pinning is deliberate: an
 unpinned `npx -y n8n-mcp` changes under you between sessions, which defeats
 reproducibility and makes an audit meaningless.
 

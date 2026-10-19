@@ -46,7 +46,7 @@ credentials. If it fails, stop and show me the error: everything downstream
 depends on this.
 
 Then run ./scripts/verify-setup.sh and show me the result. It checks Node, git,
-the MCP config, the n8n-mcp pin and its node database, the 20 skills, the hooks,
+the MCP config, the n8n-mcp pin and its node database, the 23 skills, the generated agent configs, the hooks,
 and the toolkit. Fix anything it flags that is fixable without my input (missing
 executable bits, missing .env copied from .env.example, git init). Report
 anything that needs a decision from me instead of deciding for me.
@@ -88,7 +88,7 @@ PHASE 4 - Instance reality check
 Run ./scripts/doctor.sh and show me the output. Then tell me, explicitly:
 - which URL the managed server is pointed at
 - whether the public API is enabled and the key is accepted
-- the n8n version, and whether the pinned n8n-mcp@2.73.0 is a good match for it
+- the n8n version, and whether the pinned n8n-mcp@2.94.3 is a good match for it
   (call tools_documentation to see which n8n version the server is tested
   against, and flag a large gap: it means schemas may be stale and the pin
   should be bumped)

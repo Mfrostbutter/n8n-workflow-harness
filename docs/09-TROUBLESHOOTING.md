@@ -83,7 +83,8 @@ Read the `connections` object after every write. This is step 5 of
 Symptoms: invented `typeVersion`s, no `get_node` call before configuring, an
 expression reading `$json` for webhook data.
 
-- Check they are present: `ls .claude/skills` should show 20, and
+- Check they are present: `ls .agents/skills` should show 23, `ls .claude/skills`
+  the same (links; `npm run gen:agents` recreates them), and
   `./scripts/verify-setup.sh` confirms each has a `SKILL.md`.
 - Claude Code must be running **in this directory**. Project skills do not load
   from elsewhere. Alternatively `./setup.sh --global-skills`.

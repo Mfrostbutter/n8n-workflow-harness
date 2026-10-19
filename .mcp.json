@@ -2,16 +2,21 @@
   "mcpServers": {
     "n8n-docs": {
       "command": "node",
-      "args": ["scripts/mcp-server.mjs"],
+      "args": [
+        "scripts/mcp-server.mjs"
+      ],
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
-        "DISABLE_CONSOLE_OUTPUT": "true"
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_MCP_TELEMETRY_DISABLED": "true"
       }
     },
     "n8n": {
       "command": "node",
-      "args": ["scripts/mcp-server.mjs"],
+      "args": [
+        "scripts/mcp-server.mjs"
+      ],
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
@@ -19,7 +24,15 @@
         "N8N_API_URL": "${N8N_API_URL:-}",
         "N8N_API_KEY": "${N8N_API_KEY:-}",
         "N8N_CF_CLIENT_ID": "${N8N_CF_CLIENT_ID:-}",
-        "N8N_CF_CLIENT_SECRET": "${N8N_CF_CLIENT_SECRET:-}"
+        "N8N_CF_CLIENT_SECRET": "${N8N_CF_CLIENT_SECRET:-}",
+        "N8N_MCP_TELEMETRY_DISABLED": "true"
+      }
+    },
+    "n8n-official": {
+      "type": "http",
+      "url": "${N8N_API_URL:-http://unset.invalid}/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer ${N8N_MCP_ACCESS_TOKEN:-}"
       }
     }
   }

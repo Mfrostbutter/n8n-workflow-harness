@@ -89,13 +89,30 @@ const BEHAVIOR_FIELDS = [
   'alwaysOutputData', 'executeOnce', 'notesInFlow', 'notes',
 ];
 
-/** Reduces a workflow to its behavior, for comparison only. Never for export. */
-export function normalize(wf) {
+/** Reduces a workflow to its behavior, for comparison only. Never for export.
+ *  Portable references compare by name: credentials drop their instance id, and an
+ *  Execute Sub-workflow reference (repo: __workflowName; instance: id) becomes the
+ *  workflow name when opts.workflowNameById can resolve it. */
+export function normalize(wf, opts = {}) {
+  const byId = opts.workflowNameById ?? new Map();
+  const portable = (params) => {
+    const p = JSON.parse(JSON.stringify(params ?? {}));
+    const ref = p.workflowId;
+    if (ref && typeof ref === 'object' && ref.__rl) {
+      const name = ref.__workflowName ?? byId.get(String(ref.value ?? '')) ?? (ref.mode === 'list' ? ref.cachedResultName : undefined);
+      if (name) p.workflowId = { __rl: true, ref: name };
+    }
+    return p;
+  };
   const nodes = (wf.nodes ?? [])
     .filter((n) => !String(n.type ?? '').endsWith('stickyNote'))
     .map((n) => {
       const out = {};
       for (const f of BEHAVIOR_FIELDS) if (n[f] !== undefined) out[f] = n[f];
+      if (out.parameters) out.parameters = portable(out.parameters);
+      if (out.credentials) {
+        out.credentials = Object.fromEntries(Object.entries(out.credentials).map(([t, c]) => [t, { name: c?.name ?? '' }]));
+      }
       return out;
     })
     .sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -106,6 +123,34 @@ export function normalize(wf) {
     connections: wf.connections ?? {},
     settings: wf.settings ?? {},
   });
+}
+
+/** Human-readable list of where two normalized workflows differ. */
+export function describeDiff(a, b) {
+  const out = [];
+  const an = new Map(a.nodes.map((n) => [n.name, n]));
+  const bn = new Map(b.nodes.map((n) => [n.name, n]));
+  for (const name of an.keys()) if (!bn.has(name)) out.push(`node only in A: ${name}`);
+  for (const name of bn.keys()) if (!an.has(name)) out.push(`node only in B: ${name}`);
+  for (const [name, node] of an) {
+    const other = bn.get(name);
+    if (!other) continue;
+    if (JSON.stringify(node.parameters) !== JSON.stringify(other.parameters)) {
+      out.push(`parameters differ: ${name}`);
+    }
+    if (node.typeVersion !== other.typeVersion) {
+      out.push(`typeVersion differs: ${name} (A ${node.typeVersion}, B ${other.typeVersion})`);
+    }
+    if (JSON.stringify(node.credentials ?? null) !== JSON.stringify(other.credentials ?? null)) {
+      out.push(`credentials differ: ${name}`);
+    }
+    if ((node.disabled ?? false) !== (other.disabled ?? false)) {
+      out.push(`disabled differs: ${name} (A ${node.disabled ?? false}, B ${other.disabled ?? false})`);
+    }
+  }
+  if (JSON.stringify(a.connections) !== JSON.stringify(b.connections)) out.push('connections differ');
+  if (JSON.stringify(a.settings) !== JSON.stringify(b.settings)) out.push('settings differ');
+  return out;
 }
 
 export function fail(msg, code = 2) {

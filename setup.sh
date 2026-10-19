@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./setup.sh                 wire up this clone
-#   ./setup.sh --global-skills also copy the 20 skills into ~/.claude/skills/
+#   ./setup.sh --global-skills also copy the 23 skills into ~/.agents/skills/
 #   ./setup.sh --dry-run       show what it would do
 #
 # Does NOT write credentials and does NOT touch an n8n instance.
@@ -69,8 +69,11 @@ fi
 echo "== git"
 if [ -d .git ]; then
   echo "  git repository present"
+  run git config diff.n8n-workflow.textconv "node scripts/wf-textconv.mjs"
+  echo "  workflow textconv wired: git diff on workflows/ shows behavior, not canvas moves"
 else
   run git init -q
+  run git config diff.n8n-workflow.textconv "node scripts/wf-textconv.mjs"
   echo "  git initialized. Commit before your first change: that is the rollback point."
 fi
 
@@ -79,7 +82,7 @@ if [ "$GLOBAL" = 1 ]; then
   DEST="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
   STAMP="$(date +%Y%m%d-%H%M%S)"
   run mkdir -p "$DEST"
-  for src in .claude/skills/*/; do
+  for src in .agents/skills/*/; do
     name="$(basename "$src")"
     if [ -d "$DEST/$name" ]; then
       BK="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills-backup-$STAMP"
@@ -92,11 +95,14 @@ if [ "$GLOBAL" = 1 ]; then
     fi
     run cp -R "$src" "$DEST/$name"
   done
-  echo "  Skills are now global. They also load per-project from .claude/skills/."
+  echo "  Skills are now global. They also load per-project from .agents/skills/."
 fi
 
 echo
 if [ "$DRY" = 1 ]; then echo "(dry run: nothing changed)"; exit 0; fi
+
+echo "== agent configs"
+run node scripts/gen-agent-configs.mjs
 
 echo "== preflight"
 ./scripts/verify-setup.sh || true

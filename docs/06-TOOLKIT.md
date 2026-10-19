@@ -83,6 +83,68 @@ It says so itself: passing means the JSON is well-formed, not that the workflow
 is correct. Use `validate_workflow` via MCP for semantic checks, and an
 execution for the truth.
 
+## `lint-workflow` — promotion readiness
+
+```bash
+./scripts/lint-workflow.sh workflows/dev/order-intake.json
+./scripts/lint-workflow.sh workflows/dev --strict --json
+```
+
+Static checks on a workflow file or directory before it moves environments.
+Errors: local, private or environment-labelled hosts in a parameter, a
+credential reference with no name, a token-shaped literal. Warnings: no tags,
+no error workflow, pinned data, disabled nodes, TODO markers, `$env` or
+`process.env` in code, a webhook path that is a bare UUID. Exit 1 on an error,
+or on a warning with `--strict`.
+
+It ends with the manifest: every credential name and type, every `$vars`
+reference, every sub-workflow reference, every host. That list is what the
+target environment must provide. Flags: `--require-tags`,
+`--require-error-workflow`, `--allow-host <pattern>`.
+
+## `wf-diff` — what changed
+
+```bash
+./scripts/wf-diff.sh workflows/staging/x.json workflows/prod/x.json
+```
+
+Semantic diff of two workflow files over the same normalisation `drift-check`
+uses: nodes only on one side, parameter, typeVersion, credential or disabled
+changes per node, connection and settings changes. Canvas moves do not count.
+Exit 1 on a difference. `setup.sh` also wires `wf-textconv.mjs` as the git
+textconv for `workflows/**/*.json`, so `git diff` and `git log -p` render the
+same view.
+
+## `node-inventory` — the input to an upgrade plan
+
+```bash
+./scripts/node-inventory.sh workflows/prod
+```
+
+Every node type in use with its typeVersions and the workflows that carry each,
+mixed versions flagged, plus the credential types referenced. Feed it to the
+`n8n-upgrade-plan` skill before an instance upgrade, or to an approved-node
+review.
+
+## `gen-agent-configs` — one source per tool
+
+```bash
+./scripts/gen-agent-configs.sh            # regenerate
+./scripts/gen-agent-configs.sh --check    # exit 1 if stale
+```
+
+From `AGENTS.md`: `CLAUDE.md` (only if absent) and `.aiassistant/rules/`.
+From `.mcp.json`: `.vscode/mcp.json`, `.cursor/mcp.json`, `.codex/config.toml`.
+From `.agents/skills/`: links in `.claude/skills/` (`--copy` on Windows).
+
+## `guard-pre-tool` — the hook every editor runs
+
+Not called by hand. Reads the hook payload on stdin, detects the vendor shape,
+and exits 2 with the reason on a delete tool or delete command, or asks (Claude
+Code, Codex) or denies (Cursor, Copilot, Devin) on a deploy or promotion to
+staging or prod. [11-EDITORS.md](11-EDITORS.md) has the wiring per tool;
+`tests/guard.test.mjs` the contract.
+
 ## `verify-setup`
 
 ```bash
@@ -187,7 +249,10 @@ Convenience wrappers, for anyone who reaches for npm first:
 | `npm run setup` | `./setup.sh` |
 | `npm run verify` | `./scripts/verify-setup.sh` |
 | `npm run smoke` | the MCP handshake |
-| `npm test` | the 44 tests |
+| `npm test` | toolkit, instance and guard tests |
+| `npm run lint` | `lint-workflow.mjs` |
+| `npm run inventory` | `node-inventory.mjs` |
+| `npm run gen:agents` / `check:agents` | `gen-agent-configs.mjs` |
 | `npm run doctor` | `doctor.mjs` |
 | `npm run drift` | `drift-check.mjs` |
 | `npm run export` | `export-all.mjs` |
@@ -195,10 +260,11 @@ Convenience wrappers, for anyone who reaches for npm first:
 ## Tests
 
 ```bash
-node --test tests/tools.test.mjs tests/instance.test.mjs
+npm test
 ```
 
-44 tests. `instance.test.mjs` runs the real HTTP paths against a fake n8n API
+`tools.test.mjs` covers the normaliser, diff, lint and inventory logic;
+`guard.test.mjs` the hook contract. `instance.test.mjs` runs the real HTTP paths against a fake n8n API
 server, so the instance-touching tools are covered offline with no instance
 involved. Pass explicit file paths: `node --test tests/` fails on current Node,
 which resolves the directory as a module.

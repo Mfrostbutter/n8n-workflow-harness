@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "node scripts/guard-pre-tool.mjs"
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "node scripts/guard-pre-tool.mjs"
+      }
+    ]
+  }
+}

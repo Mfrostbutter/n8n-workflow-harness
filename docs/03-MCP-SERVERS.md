@@ -11,7 +11,7 @@ the n8n version in front of you.
 
 What ships inside the package:
 
-- 2,500+ node schemas (832 core, 1,700+ community), 99% property coverage
+- 3,100+ node schemas (core and community), 99% property coverage
 - real validators for a single node and for a whole workflow
 - 2,700+ workflow templates with searchable metadata
 - a prebuilt SQLite database (`data/nodes.db`, ~94 MB) holding all of it
@@ -22,7 +22,7 @@ once installed.
 ## Pinned, not downloaded on demand
 
 ```json
-"dependencies": { "n8n-mcp": "2.73.0" }
+"dependencies": { "n8n-mcp": "2.94.3" }
 ```
 
 `package.json` pins it, `package-lock.json` commits the resolved URL and the
@@ -40,17 +40,19 @@ package relative to its own location, so the working directory the client uses
 does not matter, and if `npm ci` was skipped it says so in plain language
 instead of failing with `ENOENT`.
 
-## Two servers, one package
+## Three servers
 
-`n8n-mcp` changes behaviour depending on whether it can see instance
-credentials, so it is registered twice. That gives you a half that cannot
+Two are `n8n-mcp`, which changes behaviour depending on whether it can see
+instance credentials, so it is registered twice. The third is the instance's
+own MCP server, which runs nothing locally. That gives you a half that cannot
 possibly touch an instance and a half that can, with no ambiguity about which
 you are calling.
 
 | Server | Credentials | Tools | Reaches an instance | Use for |
 |---|---|---|---|---|
 | `n8n-docs` | none | 7 | No | Node schemas, validation, templates |
-| `n8n` | `N8N_API_URL`, `N8N_API_KEY` | 25 | **Yes** | Workflow CRUD, executions, credentials, audit |
+| `n8n` | `N8N_API_URL`, `N8N_API_KEY` | 28 | **Yes** | Workflow CRUD, executions, credentials, folders, data tables, audit |
+| `n8n-official` | `N8N_API_URL`, `N8N_MCP_ACCESS_TOKEN` | varies by n8n version | **Yes** | Workflow SDK build loop, version history and diffs, publish, Agents, data tables |
 
 **There is no `n8n-docs-mcp` package.** If you went looking for one on npm you
 would not find it. "Docs mode" is `n8n-mcp` started without an API URL. That is
@@ -60,11 +62,11 @@ both together.
 Counts above are measured, not quoted: `npm run smoke` completes a real
 handshake and prints them. Note the server's own `tools_documentation` says
 "24 tools" because it does not count `tools_documentation` itself in its
-categories; the wire protocol exposes 7 without credentials and 25 with.
+categories; the wire protocol exposes 7 without credentials and 28 with.
 
 ## Tool inventory
 
-**7 tools without credentials, 25 with** (the 7 plus 18 instance tools).
+**7 tools without credentials, 28 with** (the 7 plus 21 instance tools).
 `tools_documentation` is the best first call in a session on an unfamiliar n8n
 version.
 
@@ -97,7 +99,7 @@ For Code nodes, call `tools_documentation({topic: "javascript_code_node_guide"})
 | `n8n_create_workflow` | Create |
 | `n8n_update_partial_workflow` | Incremental diff update. Prefer this |
 | `n8n_update_full_workflow` | Whole-workflow replacement |
-| `n8n_delete_workflow` | Delete |
+| `n8n_delete_workflow` | Delete. Denied by the guard and by `.claude/settings.json`; archive instead |
 | `n8n_validate_workflow` | Validate by id, against the deployed copy |
 | `n8n_autofix_workflow` | Auto-fix common issues. Read the diff before trusting it |
 | `n8n_test_workflow` | Trigger a run: webhook, form, chat, execute |
@@ -109,6 +111,9 @@ For Code nodes, call `tools_documentation({topic: "javascript_code_node_guide"})
 | `n8n_manage_datatable` | Data tables and rows |
 | `n8n_evaluations` | Evaluation test runs (n8n 2.30+, run/cancel on 2.32+) |
 | `n8n_audit_instance` | Security audit of the instance |
+| `n8n_list_catalog` | Projects, tags, variables, users on the instance |
+| `n8n_manage_agents` | n8n Agents: `action: list / get / create / update / delete / publish` |
+| `n8n_explore_node_resources` | Live resource lookups a node offers (sheets, channels, tables) with real credentials |
 
 Several of these are version-gated. `n8n_health_check` reports the version; if a
 tool 404s, check that before assuming it is broken.
@@ -182,7 +187,7 @@ If you cannot run `npm ci` at all:
 cp .mcp.npx.json .mcp.json
 ```
 
-Still version-qualified (`n8n-mcp@2.73.0`), but no lockfile and no integrity
+Still version-qualified (`n8n-mcp@2.94.3`), but no lockfile and no integrity
 hash. Fetches from the registry on first run.
 
 ### 4. Docker
@@ -203,11 +208,11 @@ Then point `.mcp.json` at the built `dist/mcp/stdio-wrapper.js`. Only worth it
 if you are modifying the server; note it builds the node database as part of
 setup. Follow upstream's own instructions, not these.
 
-## Verifying both servers
+## Verifying the servers
 
 ```bash
 npm run smoke                              # no credentials: expect 7 tools
-set -a; . ./.env; set +a; npm run smoke    # with credentials: expect 25
+set -a; . ./.env; set +a; npm run smoke    # with credentials: expect 28
 ```
 
 The smoke test completes a real `initialize` and `tools/list`, so a pass means
@@ -226,9 +231,14 @@ n8n_list_workflows({limit: 5})            -> managed mode reads the instance
 
 Docs answering while managed fails means credentials, not configuration.
 
+For `n8n-official`, `/mcp` shows the connection state; the first call is
+`get_instance_context`, which names the instance, version and projects. A 401
+means the access token (Settings → Instance-level MCP, generated per user)
+is missing or belongs to another instance.
+
 ## Scoping and approval
 
-Both servers are declared in the project `.mcp.json`, so they exist only when
+All three servers are declared in the project `.mcp.json`, so they exist only when
 Claude Code runs in this directory, and Claude Code asks you to approve them on
 first use. `.claude/settings.json` lists them under `enabledMcpjsonServers`.
 
@@ -238,21 +248,29 @@ To work docs-only for a while — reviewing JSON, no instance access — remove
 The seven read-only docs tools are pre-allowed in `.claude/settings.json`. Every
 instance-mutating tool deliberately is not, so you see a prompt before a write.
 
-## Coexisting with n8n's official tooling
+## Official versus community: which server for what
 
-n8n ships its own, and it is the supported path:
+The official instance MCP server (GA since n8n 2.31, `Settings → Instance-level
+MCP`) and `n8n-mcp` overlap on workflow reads and writes. They do not overlap on
+what matters, so the harness carries both and routes by task:
 
-1. **Instance-level MCP** (Settings → Instance-level MCP) exposes selected
-   workflows from the instance itself, with a credential the instance issues.
-   That is the right front door for a customer-owned instance, especially where
-   an outbound API key is not acceptable. It is complementary: it exposes
-   *workflows as tools*, where the managed server here does *workflow CRUD*.
-2. **Official skills plugin** (`n8n-io/skills`) overlaps with the vendored
-   skills here. If you install both, do the dedupe pass in
-   [04-SKILLS.md](04-SKILLS.md#deduping-against-the-official-n8n-skills).
+| Task | Server | Why |
+|---|---|---|
+| Node schemas, community nodes, templates, validation profiles | `n8n-docs` | Offline database of 3,100+ nodes; the official server only knows nodes installed on the instance |
+| Credential CRUD, folders, executions by filter, instance audit | `n8n` | The official server exposes none of these |
+| Building a workflow from code, version history and diffs, publish, restore a version | `n8n-official` | Owns the Workflow SDK loop and the version store; writes land as a draft you then publish |
+| n8n Agents (the first-class artifact), data tables | `n8n-official` | Native; `n8n_manage_agents` on the community server is a thin public-API wrapper |
+| Health, version, "is the key accepted" | `n8n` (`n8n_health_check`) or `doctor.sh` | Cheapest signal |
 
-Where they overlap, prefer the official tooling: it tracks the product. This
-harness is for what it does not cover yet.
+The official server tracks the product and is the supported path where both
+work. The community server is for what the product does not expose. Neither
+reaches prod from a build session; the promotion path does
+([12-ENTERPRISE.md](12-ENTERPRISE.md)).
+
+**Official skills plugin** (`n8n-io/skills`) names its MCP server `n8n-mcp`,
+which collides with nothing here but will with a user-level server of that
+name. It overlaps with the vendored skills; if you install both, do the dedupe
+pass in [04-SKILLS.md](04-SKILLS.md#deduping-against-the-official-n8n-skills).
 
 ## Upstream
 

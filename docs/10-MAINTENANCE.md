@@ -1,7 +1,7 @@
 # Maintenance
 
-Three things drift: the vendored skills, the pinned MCP server, and the n8n
-instance itself. Each has a deliberate path.
+Four things drift: the vendored skills, the pinned packages, the generated
+agent configs, and the n8n instance itself. Each has a deliberate path.
 
 ## Refreshing the vendored skills
 
@@ -12,21 +12,22 @@ git diff --stat
 ```
 
 Replaces the fifteen upstream skills wholesale from
-`czlonkowski/n8n-skills`. Never touches the five originals
+`czlonkowski/n8n-skills`. Never touches the eight originals
 (`n8n-instance-ops`, `n8n-enterprise-delivery`, `n8n-node-dev`, `n8n-gotchas`,
-`n8n-canvas-docs`).
+`n8n-canvas-docs`, `n8n-promotion-pipeline`, `n8n-workflow-as-code`,
+`n8n-upgrade-plan`).
 
 Pin to a tag instead of `main` when you want a known state:
 
 ```bash
-./scripts/refresh-skills.sh --ref v1.29.0
+./scripts/refresh-skills.sh --ref v1.35.0
 ```
 
 After a refresh:
 
 1. Read the diff. Upstream sometimes renames or merges a skill.
 2. Record the upstream commit (the script prints it) in `ATTRIBUTION.md`.
-3. Re-run `./scripts/verify-setup.sh` — the skill count should still be 20.
+3. Run `npm run gen:agents`, then `./scripts/verify-setup.sh`; the skill count should still be 23.
 4. Commit as its own change, not mixed with your work.
 
 **Local edits to vendored skills are destroyed.** That is the design. If you
@@ -50,12 +51,14 @@ npm view n8n-mcp@latest engines             # Node requirement
 Then:
 
 ```bash
-npm install --save-exact n8n-mcp@2.74.0     # updates package.json + lock
+npm install --save-exact n8n-mcp@2.95.0     # updates package.json + lock
 npm run smoke                               # server still starts, tools present
 ./scripts/verify-setup.sh                    # pin matches install, db present
 ```
 
-Both servers run the same package, so one bump moves both. Restart Claude Code
+Both community servers run the same package, so one bump moves both. n8n-mcp
+below 2.87 cannot write to n8n 2.36 or newer, so check the upstream changelog
+against your instance version before and after an n8n upgrade. Restart Claude Code
 (the server is spawned once per session) and confirm in-session:
 
 ```
@@ -66,6 +69,10 @@ n8n_health_check()        # your instance's actual version
 Commit `package.json` and `package-lock.json` together, and update the pin
 mentioned in `ATTRIBUTION.md`, `README.md`, and `03-MCP-SERVERS.md`. Regenerate
 `vendor/` if you maintain it.
+
+`@n8n/cli` and `@n8n/workflow-sdk` follow the same procedure. Bump the CLI
+when the instance moves to a release whose promotion or package features the
+skills describe; `npx n8n-cli --version` after the bump.
 
 Bump the server and the skills together when you can: the skills describe the
 server's tools, and a large gap between them is where "the skill names a tool
@@ -146,7 +153,7 @@ upstream than vendor:
 /plugin install czlonkowski/n8n-skills
 ```
 
-Then delete the fifteen vendored directories, keep the five originals, and
+Then delete the fifteen vendored directories, keep the eight originals, and
 delete this repo's `hooks` block from `.claude/settings.json` (the plugin ships
 its own enforcement layer, and two overlapping layers is noise). Trade-offs are
 tabled in [04-SKILLS.md](04-SKILLS.md#vendored-or-the-upstream-plugin).
@@ -158,7 +165,8 @@ Cheap and worth running on a schedule:
 ```bash
 npm run smoke                                                # the engine
 ./scripts/verify-setup.sh                                    # the whole clone
-node --test tests/tools.test.mjs tests/instance.test.mjs     # 44 tests
+npm test                                                     # toolkit, instance, guard
+npm run check:agents                                         # generated configs current
 ./scripts/doctor.sh                                          # instance
 ./scripts/drift-check.sh dev                                 # repo vs reality
 ```
@@ -168,7 +176,8 @@ want the repo's source-of-truth claim enforced rather than asserted.
 
 ## Changing the rules
 
-`CLAUDE.md` is the operating contract, loaded every session. It is the right
+`AGENTS.md` is the operating contract, loaded every session by every agent;
+`CLAUDE.md` includes it. Run `npm run gen:agents` after editing it. It is the right
 place for a rule your team keeps having to repeat: a naming convention, an
 approved node list, a change window, a promotion approver.
 

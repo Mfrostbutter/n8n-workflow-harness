@@ -1,0 +1,33 @@
+{
+  "$comment": "Claude Code organisation policy. Install as managed-settings.json (see docs/12-ENTERPRISE.md). Project .claude/settings.json cannot override a deny listed here.",
+  "permissions": {
+    "deny": [
+      "mcp__n8n__n8n_delete_workflow",
+      "mcp__n8n-official__delete_data_table",
+      "mcp__n8n-official__delete_data_table_column",
+      "mcp__n8n-official__delete_agent",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": ["n8n-docs", "n8n", "n8n-official"],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-pre-tool.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
