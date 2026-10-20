@@ -12,10 +12,10 @@ git diff --stat
 ```
 
 Replaces the fifteen upstream skills wholesale from
-`czlonkowski/n8n-skills`. Never touches the nine originals
+`czlonkowski/n8n-skills`. Never touches the ten originals
 (`n8n-instance-ops`, `n8n-enterprise-delivery`, `n8n-node-dev`, `n8n-gotchas`,
 `n8n-canvas-docs`, `n8n-promotion-pipeline`, `n8n-workflow-as-code`,
-`n8n-upgrade-plan`, `n8n-project-organization`).
+`n8n-upgrade-plan`, `n8n-project-organization`, `n8n-credential-mapping`).
 
 Pin to a tag instead of `main` when you want a known state:
 
@@ -153,7 +153,7 @@ upstream than vendor:
 /plugin install czlonkowski/n8n-skills
 ```
 
-Then delete the fifteen vendored directories, keep the nine originals, and
+Then delete the fifteen vendored directories, keep the ten originals, and
 delete this repo's `hooks` block from `.claude/settings.json` (the plugin ships
 its own enforcement layer, and two overlapping layers is noise). Trade-offs are
 tabled in [04-SKILLS.md](04-SKILLS.md#vendored-or-the-upstream-plugin).

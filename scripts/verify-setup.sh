@@ -107,7 +107,7 @@ echo
 echo "== skills"
 if [ -d .agents/skills ]; then
   N="$(find .agents/skills -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')"
-  [ "$N" -eq 24 ] && ok "24 skills installed" || note "$N skill directories (expected 24)"
+  [ "$N" -eq 25 ] && ok "25 skills installed" || note "$N skill directories (expected 25)"
   MISSING=""
   for s in using-n8n-mcp-skills n8n-mcp-tools-expert n8n-instance-ops n8n-gotchas \
            n8n-enterprise-delivery n8n-node-dev n8n-canvas-docs; do

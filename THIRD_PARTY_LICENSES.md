@@ -38,7 +38,7 @@ Upstream: https://github.com/czlonkowski/n8n-mcp
 
 ## n8n-skills
 
-Fifteen of the twenty-four skills under `.agents/skills/` are vendored, unmodified,
+Fifteen of the twenty-five skills under `.agents/skills/` are vendored, unmodified,
 from the `n8n-skills` pack. See ATTRIBUTION.md for the exact list.
 
 Upstream: https://github.com/czlonkowski/n8n-skills

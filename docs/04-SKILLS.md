@@ -1,6 +1,6 @@
 # Skills
 
-Twenty-four skills live in `.agents/skills/`, the directory Codex, Cursor,
+Twenty-five skills live in `.agents/skills/`, the directory Codex, Cursor,
 Copilot, Devin and Junie read natively. `npm run gen:agents` links them into
 `.agents/skills/` for Claude Code. Nothing to install.
 
@@ -48,6 +48,7 @@ explains it.
 | `n8n-workflow-as-code` | `@n8n/workflow-sdk`: JSON to code and back, validate, Mermaid |
 | `n8n-upgrade-plan` | Node inventory, typeVersion gaps, the plan for an instance upgrade |
 | Put a workflow in a project and folder, move a credential, audit who owns what | `n8n-project-organization` |
+| Create a credential from the secret manager, say which secret feeds it, rotate it | `n8n-credential-mapping` |
 | Stand up or harden n8n itself | `n8n-self-hosting` |
 | Package or distribute a custom node | `n8n-node-dev` |
 
@@ -70,10 +71,10 @@ Romuald Członkowski): `using-n8n-mcp-skills`, `n8n-mcp-tools-expert`,
 `n8n-code-tool`, `n8n-agents`, `n8n-binary-and-data`, `n8n-error-handling`,
 `n8n-multi-instance`, `n8n-self-hosting`, `n8n-subworkflows`.
 
-**Nine original** to this harness, written from enterprise delivery work:
+**Ten original** to this harness, written from enterprise delivery work:
 `n8n-instance-ops`, `n8n-enterprise-delivery`, `n8n-node-dev`, `n8n-gotchas`,
 `n8n-canvas-docs` (adapted), `n8n-promotion-pipeline`, `n8n-workflow-as-code`,
-`n8n-upgrade-plan`, `n8n-project-organization`.
+`n8n-upgrade-plan`, `n8n-project-organization`, `n8n-credential-mapping`.
 
 Full credit: [../ATTRIBUTION.md](../ATTRIBUTION.md).
 
@@ -81,10 +82,10 @@ Full credit: [../ATTRIBUTION.md](../ATTRIBUTION.md).
 
 **Do not hand-edit a vendored skill.** `./scripts/refresh-skills.sh` replaces
 all fifteen wholesale, so your edit disappears at the next refresh with no
-warning. A change worth keeping goes into one of the nine originals, or upstream
+warning. A change worth keeping goes into one of the ten originals, or upstream
 as a pull request.
 
-The nine originals are yours to edit. Keep the frontmatter `description`
+The ten originals are yours to edit. Keep the frontmatter `description`
 specific: it is the entire basis for description-based activation, so a vague
 description means the skill does not fire when it should.
 
@@ -107,7 +108,7 @@ Upstream distributes the pack as a Claude Code plugin:
 This repo vendors so it clones and runs in a restricted environment with no
 plugin approval. If your environment allows the plugin and you would rather
 track upstream, install it and delete the fifteen vendored directories, keeping
-the nine originals. Then do the dedupe pass below.
+the ten originals. Then do the dedupe pass below.
 
 ## Deduping against the official n8n skills
 

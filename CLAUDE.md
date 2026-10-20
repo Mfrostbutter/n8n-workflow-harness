@@ -3,7 +3,7 @@
 ## Claude Code only
 
 - Skills load from `.claude/skills/`, which `npm run gen:agents` links from
-  `.agents/skills/` (`--copy` on Windows). Twenty-four skills; the router is
+  `.agents/skills/` (`--copy` on Windows). Twenty-five skills; the router is
   `using-n8n-mcp-skills`.
 - Hooks and permissions live in `.claude/settings.json`: the session contract
   is injected at start, instance-mutating `n8n_*` calls get a reminder, and

@@ -11,6 +11,9 @@ credentials*.json
 *-credentials.json
 exports/
 
+# Credential ids are instance-local. The secret map (names and references) is committed.
+deploy/creds.*.json
+
 # Local Claude Code overrides
 .claude/settings.local.json
 

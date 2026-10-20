@@ -25,6 +25,13 @@ credentials on the instance. Treat it as an admin credential:
 - Rotate on exposure, and on team changes.
 - Prefer a scoped key where your n8n version supports it.
 
+Every credential on an instance traces to a named secret in the secret
+manager through `deploy/secret-map.<env>.json`, which is committed and holds
+names and references only. `./scripts/secret-map.sh sync` creates the
+credentials from there, under `infisical run`, so no value is typed, pasted or
+printed; `verify` lists the ones in use that trace to nothing. The
+`n8n-credential-mapping` skill has the rule.
+
 Exposed a credential? Say so immediately, treat it as compromised, and rotate.
 Do not continue as though it were fine.
 

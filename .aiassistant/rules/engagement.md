@@ -30,7 +30,7 @@ credentials.
 
 ## Non-negotiables
 
-1. **Load the skill before the action, not after it fails.** Twenty-four
+1. **Load the skill before the action, not after it fails.** Twenty-five
    skills live in `.agents/skills/` (Claude Code reads them through links in
    `.claude/skills/`). `using-n8n-mcp-skills` is the router. Invoke the matching
    skill before writing an expression, configuring a node, designing a flow,
@@ -56,7 +56,10 @@ credentials.
 6. **Never hardcode secrets.** Tokens, keys, and passwords go through the n8n
    credential system. A Set node holding a token referenced by
    `{{ $json.token }}` is a leak with extra steps. Nothing secret in a text
-   field, a Code node, or this repository.
+   field, a Code node, or this repository. Every credential traces to a named
+   secret through `deploy/secret-map.<env>.json`; `./scripts/secret-map.sh`
+   creates them on the target and `verify` finds the ones that trace to
+   nothing (`n8n-credential-mapping`).
 
 7. **Export before you change, and check drift before you trust the repo.**
    `./scripts/export-all.sh` plus a commit is the rollback point, and it is
@@ -95,6 +98,7 @@ editor.
 | `./scripts/validate.sh <file>` | Before every deploy: structure |
 | `./scripts/lint-workflow.sh <file or dir>` | Before every promotion: environment literals, nameless credentials, `$env`, tags, placement, error workflow; prints the credentials and variables the target needs |
 | `./scripts/organize.sh audit\|place\|credentials\|tables\|project` | What sits where, and fixing it: untagged and personal-project workflows, credential and data table scope, batch placement, credential transfer, table copies |
+| `./scripts/secret-map.sh check\|sync\|rotate\|verify\|ids` | Credentials from the secret manager by name: `check` the map against the manager and the target's schemas, `sync` creates what is missing in its project, `verify` before a hand-over. Run under `infisical run` |
 | `./scripts/wf-diff.sh <a> <b>` | What changed between two workflow files, ignoring canvas moves |
 | `./scripts/node-inventory.sh workflows/<env>` | Node types and typeVersions, the input to an upgrade plan |
 | `./scripts/gen-agent-configs.sh [--check]` | Regenerate the per-tool configs after editing `AGENTS.md`, `.mcp.json` or `.agents/skills/` |

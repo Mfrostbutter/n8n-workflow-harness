@@ -2,7 +2,7 @@
 
 Target instance for managed (`n8n`) and official (`n8n-official`) MCP calls: **{{TARGET}}**
 
-Twenty-four n8n skills are installed in this project (`.agents/skills/`, linked into `.claude/skills/`). `using-n8n-mcp-skills` is the
+Twenty-five n8n skills are installed in this project (`.agents/skills/`, linked into `.claude/skills/`). `using-n8n-mcp-skills` is the
 router: invoke it first on any n8n task, then the specialist it points at.
 Load the skill BEFORE the action, not after it fails.
 
