@@ -11,7 +11,7 @@ every validation result, and every template comes from it. It is pinned in
 `sha512` integrity hash, and installed into `node_modules/` by `npm ci` — so it
 is a reviewed, auditable dependency rather than a runtime download.
 
-Fifteen of the twenty-four skills in `.agents/skills/` are the **n8n-skills** pack
+Fifteen of the twenty-five skills in `.agents/skills/` are the **n8n-skills** pack
 (v1.35.0, upstream commit 19cd793, refreshed 2026-10-19).
 Both projects are by **Romuald Członkowski**, both MIT licensed:
 
@@ -56,7 +56,7 @@ If you sponsor tools you depend on: https://github.com/sponsors/czlonkowski
 
 ## Skills original to this harness
 
-Nine skills are written from field experience delivering n8n to enterprise
+Ten skills are written from field experience delivering n8n to enterprise
 customers, and have no upstream equivalent:
 
 | Skill | Covers |
@@ -70,6 +70,7 @@ customers, and have no upstream equivalent:
 | `n8n-workflow-as-code` | `@n8n/workflow-sdk`: JSON to code and back, offline validation, Mermaid |
 | `n8n-upgrade-plan` | Node inventory, typeVersion gaps, the plan for an instance upgrade |
 | `n8n-project-organization` | Projects, folders, tags and credential ownership: the placement in the JSON, `organize.sh`, credentials and data tables following a workflow |
+| `n8n-credential-mapping` | Which secret feeds which credential per environment: the committed secret map, `secret-map.sh`, the id ledger, rotation, verify |
 
 ## n8n itself
 

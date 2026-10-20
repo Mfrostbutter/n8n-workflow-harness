@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./setup.sh                 wire up this clone
-#   ./setup.sh --global-skills also copy the 24 skills into ~/.agents/skills/
+#   ./setup.sh --global-skills also copy the 25 skills into ~/.agents/skills/
 #   ./setup.sh --dry-run       show what it would do
 #
 # Does NOT write credentials and does NOT touch an n8n instance.

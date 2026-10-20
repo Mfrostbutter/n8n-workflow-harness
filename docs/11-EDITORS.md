@@ -11,7 +11,7 @@ varies is how much of the guidance and enforcement layer each one picks up.
 | MCP servers (schemas, validation, instance, official) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Toolkit (`doctor`, `drift-check`, `lint-workflow`, …) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Contract auto-loaded | `CLAUDE.md` (`@AGENTS.md`) | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md`, `.aiassistant/rules/` |
-| 24 skills discovered | `.claude/skills/` (links) | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | read on demand |
+| 25 skills discovered | `.claude/skills/` (links) | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | read on demand |
 | Pre-tool guard (deny deletes, ask on prod) | ✅ ask | ✅ ask | ✅ deny | ✅ deny | ✅ deny | ❌ |
 | Session-start contract injection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 

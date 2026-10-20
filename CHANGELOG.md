@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-19 (c)
+
+Credential mapping. Every credential on an instance traces to a named secret.
+
+- New skill `n8n-credential-mapping` (25 skills, ten original): the committed
+  secret map, the three homes a value can have, creating credentials from the
+  secret manager without a value reaching the terminal, rotation without a
+  value-update endpoint, verifying, reading back.
+- `scripts/secret-map.mjs` (`./scripts/secret-map.sh`): `check`, `sync`,
+  `rotate`, `verify`, `ids` over `deploy/secret-map.<env>.json` (committed)
+  and `deploy/creds.<env>.json` (ids, gitignored). Output scrubbed against
+  resolved values. `tests/secret-map.test.mjs` runs it against a fake API and
+  a fake `infisical` on `PATH`, asserting no value reaches the output.
+- `deploy/secret-map.example.json`; `AGENTS.md` non-negotiable 6 and the
+  toolkit row; `npm run secrets:verify`; docs 04, 06, 08, 12.
+
 ## 2026-10-19 (b)
 
 Placement. Every workflow is tagged, in a project and in a folder, and the

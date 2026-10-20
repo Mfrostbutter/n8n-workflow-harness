@@ -152,6 +152,29 @@ rebind the node ids it prints. Every command writes, so a named environment
 needs its own `N8N_API_URL_<ENV>` pair; there is no fallback to the bare one.
 The rule and the API detail: the `n8n-project-organization` skill.
 
+## `secret-map` — credentials from the secret manager
+
+```bash
+./scripts/secret-map.sh check dev
+infisical run --env dev -- ./scripts/secret-map.sh sync dev
+./scripts/secret-map.sh verify dev
+./scripts/secret-map.sh ids dev
+infisical run --env dev -- ./scripts/secret-map.sh rotate "Acme API (dev)"
+```
+
+`deploy/secret-map.<env>.json` (committed; `deploy/secret-map.example.json`
+is the template) names each credential, its type, its project and where each
+field comes from: `secret:NAME` from the secret manager, `env:VAR` from the
+environment, anything else a literal. `check` lists the secret names at the
+map's path and compares the data keys with the target's credential schema;
+`sync` creates what is missing, in its project, and records the ids in
+`deploy/creds.<env>.json` (gitignored); `verify` reports mapped credentials
+missing from the target, ledger ids that disagree, and credentials in use that
+the map does not name; `rotate` creates a replacement because the public API
+cannot update a value; `ids` rebuilds the ledger by name. Values stay in the
+process; every printed line is scrubbed against them, and none goes on a
+command line. The rule and the API detail: the `n8n-credential-mapping` skill.
+
 ## `gen-agent-configs` — one source per tool
 
 ```bash
@@ -180,7 +203,7 @@ staging or prod. [11-EDITORS.md](11-EDITORS.md) has the wiring per tool;
 
 Preflight over the whole clone: Node version, git, `.mcp.json` shape (including
 that `n8n-docs` carries no credentials), the n8n-mcp pin against what is
-actually installed, the node database, a real MCP handshake, all twenty-four
+actually installed, the node database, a real MCP handshake, all twenty-five
 skills and their `SKILL.md` files, the generated agent configs, the hooks
 executing cleanly, every toolkit script
 parsing, and whether `.env` is exported or accidentally tracked.
@@ -237,7 +260,7 @@ if offline delivery is the point of your copy. Regenerate whenever the pin in
 ```
 
 Re-vendors the fifteen upstream skills wholesale from
-`czlonkowski/n8n-skills`. Never touches the nine originals. Prints the upstream
+`czlonkowski/n8n-skills`. Never touches the ten originals. Prints the upstream
 commit so you can record it in `ATTRIBUTION.md`. Fails loudly if upstream has
 restructured and a skill it expects is gone.
 
@@ -276,9 +299,10 @@ Convenience wrappers, for anyone who reaches for npm first:
 | `npm run setup` | `./setup.sh` |
 | `npm run verify` | `./scripts/verify-setup.sh` |
 | `npm run smoke` | the MCP handshake |
-| `npm test` | toolkit, instance, organize and guard tests |
+| `npm test` | toolkit, instance, organize, secret-map and guard tests |
 | `npm run lint` | `lint-workflow.mjs --require-tags --require-placement` |
 | `npm run organize` | `organize.mjs audit` |
+| `npm run secrets:verify` | `secret-map.mjs verify` |
 | `npm run inventory` | `node-inventory.mjs` |
 | `npm run gen:agents` / `check:agents` | `gen-agent-configs.mjs` |
 | `npm run doctor` | `doctor.mjs` |
@@ -292,8 +316,10 @@ npm test
 ```
 
 `tools.test.mjs` covers the normaliser, diff, lint and inventory logic;
-`guard.test.mjs` the hook contract. `instance.test.mjs` and `organize.test.mjs`
-run the real HTTP paths against a fake n8n API server (workflows, executions,
-projects, folders, tags, credentials, data tables and the transfer endpoints),
-so the instance-touching tools are covered offline with no instance involved. Pass explicit file paths: `node --test tests/` fails on current Node,
+`guard.test.mjs` the hook contract. `instance.test.mjs`, `organize.test.mjs`
+and `secret-map.test.mjs` run the real HTTP paths against a fake n8n API server
+(workflows, executions, projects, folders, tags, credentials, data tables and
+the transfer endpoints), so the instance-touching tools are covered offline
+with no instance involved. `secret-map.test.mjs` also puts a fake `infisical`
+on `PATH` and asserts that no resolved value ever reaches the tool's output. Pass explicit file paths: `node --test tests/` fails on current Node,
 which resolves the directory as a module.

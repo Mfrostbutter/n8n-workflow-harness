@@ -59,6 +59,11 @@ common layer.
   rather than from a file on disk where you can.
 - `N8N_MCP_ACCESS_TOKEN` is per user, scoped to the project the instance
   administrator grants. Treat it like an API key.
+- Credentials on each instance come from the secret manager by name:
+  `deploy/secret-map.<env>.json` per environment, `./scripts/secret-map.sh
+  sync` run by whoever holds that environment's key, `verify` before a
+  hand-over. Where the instance is licensed, prefer external secrets
+  (`$secrets`) so rotation never touches n8n.
 - A key or token that lands in chat, a log, or a commit is compromised. Rotate
   it the same day.
 
@@ -92,5 +97,6 @@ and internal-registry paths. The instance servers reach only the URL in `.env`.
 - [ ] Promotion path chosen, documented in `AGENTS.md`, and exercised once end to end
 - [ ] Credentials and variables on staging and prod match the `lint-workflow` manifest
 - [ ] `./scripts/organize.sh audit` prints `RESULT: ok` on every environment
+- [ ] `./scripts/secret-map.sh verify` prints `RESULT: ok` on every environment, and the maps are committed
 - [ ] Managed settings deployed, or the hook configs confirmed on every editor in use
 - [ ] `ATTRIBUTION.md` and `THIRD_PARTY_LICENSES.md` kept in the hand-over copy

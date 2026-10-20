@@ -1,6 +1,6 @@
 # n8n workflow harness
 
-A coding-agent harness for building and promoting n8n workflows: twenty-four
+A coding-agent harness for building and promoting n8n workflows: twenty-five
 n8n skills, **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)** pinned as a
 real dependency next to n8n's own instance MCP server, the official `@n8n/cli`
 for promotions, a deterministic toolkit, and the discipline that keeps a
@@ -45,7 +45,7 @@ This harness closes that gap three ways:
    and the instance's own MCP server owns the build loop, version history and
    publish. The harness pins the package and verifies both rather than hoping
    npm resolves it.
-2. **Skills that fire before the mistake.** Twenty-four skills carry the rules for
+2. **Skills that fire before the mistake.** Twenty-five skills carry the rules for
    expressions, node configuration, Code nodes, AI agents, error handling, and
    the field-discovered traps that look like success.
 3. **Verification that does not trust the model.** A Node-only toolkit that
@@ -70,7 +70,7 @@ package.json                pins n8n-mcp, @n8n/cli, @n8n/workflow-sdk; package-l
 .env.example                instance URL, API key, MCP access token template
 .gitattributes              git diff on workflows/ shows behavior, not canvas moves
 .github/workflows/          CI: validate and lint on push, drift on a schedule (.gitlab-ci.yml too)
-.agents/skills/             24 skills, read by Codex, Cursor, Copilot, Devin, Junie
+.agents/skills/             25 skills, read by Codex, Cursor, Copilot, Devin, Junie
 .claude/
   settings.json             permissions, hooks, the guard
   skills/                   links into .agents/skills/                    generated
@@ -83,6 +83,7 @@ scripts/                    the deterministic toolkit (Node built-ins only)
   wf-textconv.mjs           the git textconv
   node-inventory.mjs        node types and typeVersions in use
   organize.mjs              projects, folders, tags, credential and data table scope
+  secret-map.mjs            credentials from the secret manager by name, scrubbed output
   gen-agent-configs.mjs     fan AGENTS.md, .mcp.json and the skills out per tool
   mcp-server.mjs            launches the pinned n8n-mcp, cwd-independent
   mcp-smoke.mjs             real MCP handshake against the server
@@ -90,6 +91,7 @@ scripts/                    the deterministic toolkit (Node built-ins only)
   refresh-skills.sh         re-vendor the 15 upstream skills
   verify-setup.sh           preflight over the whole clone
 workflows/{dev,staging,prod}/   workflow JSON: the source of truth
+deploy/                     secret-map.<env>.json (committed) and creds.<env>.json (ids, gitignored)
 examples/hello-set.json     minimal validated workflow
 docs/                       full documentation, see the index below
 tests/                      toolkit, instance and guard tests
@@ -123,7 +125,7 @@ promote through the agreed path → verify again on the target
 
 ## Skills
 
-Twenty-four skills in `.agents/skills/`, discovered by Codex, Cursor, Copilot,
+Twenty-five skills in `.agents/skills/`, discovered by Codex, Cursor, Copilot,
 Devin and Junie, and linked into `.claude/skills/` for Claude Code. `using-n8n-mcp-skills` is the router: it fires first and
 points at the specialist that owns the decision.
 
@@ -158,10 +160,11 @@ points at the specialist that owns the decision.
 | `n8n-workflow-as-code` | `@n8n/workflow-sdk`: JSON to code and back, validate, Mermaid |
 | `n8n-upgrade-plan` | Node inventory, typeVersion gaps, the plan for an instance upgrade |
 | `n8n-project-organization` | Projects, folders, tags and credential ownership: the placement in the JSON, `organize.sh`, credentials and data tables following a workflow |
+| `n8n-credential-mapping` | Which secret feeds which credential per environment: the committed secret map, `secret-map.sh` creating credentials from Infisical without a value reaching the terminal, the id ledger, rotation, verify |
 | `n8n-self-hosting` | Deploying n8n itself: Docker Compose, Caddy, queue mode |
 | `n8n-node-dev` | Custom node packaging, the every-worker rule, air-gapped install |
 
-Fifteen are vendored from the upstream `n8n-skills` pack; nine are original to
+Fifteen are vendored from the upstream `n8n-skills` pack; ten are original to
 this harness. See [ATTRIBUTION.md](ATTRIBUTION.md) and
 [docs/04-SKILLS.md](docs/04-SKILLS.md).
 
@@ -248,6 +251,7 @@ truth when the model and reality disagree.
 | `./scripts/wf-diff.sh <a> <b>` | What changed between two workflow files, ignoring canvas moves. `git diff` shows the same view |
 | `./scripts/node-inventory.sh <dir>` | Node types and typeVersions in use, the input to an upgrade plan |
 | `./scripts/organize.sh audit\|place\|credentials\|tables\|project` | What sits where on the instance, and fixing it: places a workflow in its project and folder with its tags, moves the credentials that go with it, copies data tables |
+| `./scripts/secret-map.sh check\|sync\|rotate\|verify\|ids` | Credentials from the secret manager by name. Creates what the committed map names, in its project, with values that never reach the terminal; finds credentials in use that trace to nothing |
 | `./scripts/gen-agent-configs.sh [--check]` | Regenerate the per-tool configs from `AGENTS.md`, `.mcp.json` and the skills |
 | `npx n8n-cli ...` | The official client CLI: promotions, packages, source control, audit |
 | `./scripts/verify-setup.sh` | Preflight over this whole clone, including a server handshake |
@@ -301,7 +305,7 @@ a user cannot edit, see `docs/managed-settings.example.json`.
 | Three MCP servers | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Toolkit | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Contract (`AGENTS.md`) auto-loaded | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 24 skills discovered | ✅ | ✅ | ✅ | ✅ | ✅ | read on demand |
+| 25 skills discovered | ✅ | ✅ | ✅ | ✅ | ✅ | read on demand |
 | Pre-tool guard | ask | ask | deny | deny | deny | ❌ |
 | Session-start injection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
@@ -361,7 +365,7 @@ real work are MIT-licensed and both by **Romuald Członkowski**:
 - **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)**, the server behind every
   schema lookup and validation call in this repo
 - **[n8n-skills](https://github.com/czlonkowski/n8n-skills)**, fifteen of the
-  twenty-four skills
+  twenty-five skills
 
 `@n8n/cli` and `@n8n/workflow-sdk` are n8n GmbH packages under the Sustainable
 Use License, pinned as dependencies and not redistributed here.
