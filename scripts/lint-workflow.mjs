@@ -31,6 +31,7 @@ const STRICT = flag('--strict');
 const JSON_OUT = flag('--json');
 const REQUIRE_TAGS = flag('--require-tags');
 const REQUIRE_ERROR_WF = flag('--require-error-workflow');
+const REQUIRE_PLACEMENT = flag('--require-placement');
 
 // Hosts that only resolve in one environment. A literal one in a parameter
 // breaks on promotion; it belongs in a variable ($vars) or a credential.
@@ -66,6 +67,10 @@ function lint(file) {
   // --- tags: the deploy gate requires them; a promotion target sorts by them
   const tags = (wf.tags ?? []).map((t) => (typeof t === 'string' ? t : t?.name)).filter(Boolean);
   if (!tags.length) (REQUIRE_TAGS ? err : warn)('no tags: the instance cannot sort or scope this workflow');
+
+  // --- placement: project and folder, applied by organize.mjs after the create
+  if (!String(wf.project ?? '').trim()) (REQUIRE_PLACEMENT ? err : warn)('no "project": add "project": "<team project>" or "personal" (every workflow is placed)');
+  if (!String(wf.folder ?? '').trim()) (REQUIRE_PLACEMENT ? err : warn)('no "folder": add "folder": "<name or path>"; the project root is not organized');
 
   // --- error workflow: unattended failures must go somewhere
   if (!wf.settings?.errorWorkflow) {

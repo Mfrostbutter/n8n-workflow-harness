@@ -19,7 +19,7 @@ validate:
     - |
       for d in workflows/*/; do
         ls "$d"*.json >/dev/null 2>&1 || continue
-        node scripts/lint-workflow.mjs "$d" --require-tags
+        node scripts/lint-workflow.mjs "$d" --require-tags --require-placement
       done
 
 drift:

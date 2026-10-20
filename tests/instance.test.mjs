@@ -260,3 +260,18 @@ test('doctor warns when the active target is production', async () => {
   const r = await run('doctor.mjs', ['dev']);
   assert.match(r.out, /ACTIVE target is production/);
 });
+
+test('export-all writes the id and keeps project and folder from the previous file', async () => {
+  let r = await run('export-all.mjs', ['dev']);
+  assert.equal(r.code, 0, r.out);
+  let wf = JSON.parse(readFileSync(join(kit, 'workflows', 'dev', 'order-intake.json'), 'utf8'));
+  assert.equal(wf.id, 'wf1');
+  assert.equal(wf.project, undefined);
+  editExport((w) => { w.project = 'Acme Corp'; w.folder = 'Order intake'; });
+  r = await run('export-all.mjs', ['dev']);
+  assert.equal(r.code, 0, r.out);
+  wf = JSON.parse(readFileSync(join(kit, 'workflows', 'dev', 'order-intake.json'), 'utf8'));
+  assert.equal(wf.project, 'Acme Corp');
+  assert.equal(wf.folder, 'Order intake');
+  assert.equal(wf.id, 'wf1');
+});

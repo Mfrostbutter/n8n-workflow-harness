@@ -88,3 +88,12 @@ test('malformed input exits clean', () => {
   assert.equal(run('{ not json').status, 0);
   assert.equal(run('').status, 0);
 });
+
+test('asks before a forced credential transfer, allows the plain one', () => {
+  const forced = run(sh('./scripts/organize.sh credentials "Shared Postgres" --to "Acme Corp" --force'));
+  assert.equal(forced.status, 0);
+  assert.equal(JSON.parse(forced.stdout).hookSpecificOutput.permissionDecision, 'ask');
+  const plain = run(sh('./scripts/organize.sh credentials "Shared Postgres" --to "Acme Corp"'));
+  assert.equal(plain.status, 0);
+  assert.equal(plain.stdout, '');
+});

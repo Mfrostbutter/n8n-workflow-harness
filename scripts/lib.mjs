@@ -57,6 +57,27 @@ export async function api(target, path, { timeoutMs = 30000 } = {}) {
   }
 }
 
+/** Any method against the n8n public API, JSON in and out. Returns {status, body}.
+ *  Never throws on HTTP status. Writes go through here so one place sets the headers. */
+export async function request(target, method, path, body, { timeoutMs = 60000 } = {}) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const headers = { 'X-N8N-API-KEY': target.key, Accept: 'application/json', 'User-Agent': 'n8n-care-kit', Connection: 'close' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const res = await fetch(`${target.base}${path}`, {
+      method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctl.signal,
+    });
+    let out = null;
+    try { out = await res.json(); } catch { /* empty or non-JSON body */ }
+    return { status: res.status, body: out };
+  } catch (e) {
+    return { status: 0, body: null, error: e.message };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 /** Pages through a list endpoint via the cursor. */
 export async function apiAll(target, path) {
   const out = [];

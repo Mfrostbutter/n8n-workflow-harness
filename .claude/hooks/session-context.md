@@ -2,7 +2,7 @@
 
 Target instance for managed (`n8n`) and official (`n8n-official`) MCP calls: **{{TARGET}}**
 
-Twenty-three n8n skills are installed in this project (`.agents/skills/`, linked into `.claude/skills/`). `using-n8n-mcp-skills` is the
+Twenty-four n8n skills are installed in this project (`.agents/skills/`, linked into `.claude/skills/`). `using-n8n-mcp-skills` is the
 router: invoke it first on any n8n task, then the specialist it points at.
 Load the skill BEFORE the action, not after it fails.
 
@@ -16,5 +16,7 @@ Rules that hold for this whole session:
    Set node, never this repo.
 5. Dev first. `./scripts/export-all.sh` and commit before changing anything;
    `./scripts/drift-check.sh` before trusting `workflows/`.
+6. Every workflow is tagged, in a project, in a folder: `tags`, `project`,
+   `folder` in the JSON, `./scripts/organize.sh place` after the create.
 
 Check templates (`search_templates`) before building a workflow from scratch.

@@ -14,7 +14,7 @@
   },
   "scripts": {
     "verify": "./scripts/verify-setup.sh",
-    "test": "node --test tests/tools.test.mjs tests/instance.test.mjs tests/guard.test.mjs",
+    "test": "node --test tests/tools.test.mjs tests/instance.test.mjs tests/organize.test.mjs tests/guard.test.mjs",
     "doctor": "node scripts/doctor.mjs",
     "drift": "node scripts/drift-check.mjs",
     "export": "node scripts/export-all.mjs",
@@ -22,7 +22,8 @@
     "setup": "./setup.sh",
     "gen:agents": "node scripts/gen-agent-configs.mjs",
     "check:agents": "node scripts/gen-agent-configs.mjs --check",
-    "lint": "node scripts/lint-workflow.mjs workflows --require-tags",
-    "inventory": "node scripts/node-inventory.mjs workflows"
+    "lint": "node scripts/lint-workflow.mjs workflows --require-tags --require-placement",
+    "inventory": "node scripts/node-inventory.mjs workflows",
+    "organize": "node scripts/organize.mjs audit"
   }
 }

@@ -32,6 +32,7 @@ const ASK_CMD = [
   [/\bn8n-cli\s+promotion-connection\s+(promote|apply|apply-continue|promote-selection|apply-selection|apply-selection-continue)\b/, 'A promotion writes to a Git branch or overwrites a target instance. Confirm the reviewed commit and the rollback snapshot exist.'],
   [/\bn8n-cli\s+source-control\s+pull\b/, 'A source-control pull overwrites local workflows with Git. Confirm export-all ran first.'],
   [/\bn8n-cli\s+workflow\s+activate\b/, 'Activating over the CLI skips validate-and-verify. Confirm validation and a read-back happened.'],
+  [/\borganize(\.sh|\.mjs)\s+credentials\b[^|;&]*--force\b/, 'A forced credential transfer takes the credential away from every workflow outside the destination project; they fail at their next run. Confirm the list organize printed without --force.'],
 ];
 const ASK_TOOL_ON_PROD = /(^|__)(publish_workflow|n8n_create_workflow|n8n_update_(full|partial)_workflow|n8n_deploy_template|n8n_autofix_workflow|update_workflow|create_workflow_from_code)$/;
 

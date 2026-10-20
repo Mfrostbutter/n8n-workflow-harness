@@ -88,6 +88,18 @@ n8n_update_partial_workflow({...})   # prefer the diff for an existing workflow
 
 Dev only. Promotion is step 8.
 
+Then place it. The repo copy carries `tags`, `project` and `folder`; write the
+returned id into it (or run `export-all`, which keeps those keys) and:
+
+```bash
+./scripts/organize.sh place workflows/dev/<file>.json dev
+```
+
+That transfers the workflow into its project, creates the folder, sets the
+tags, and moves the credentials only this workflow uses. A credential another
+workflow still uses, or a data table in another project, stops it with the
+fix named. `n8n-project-organization` has the rule.
+
 ## 5. Read the connections back
 
 **This is the step people skip, and it is the one that catches the most.**

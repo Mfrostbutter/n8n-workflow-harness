@@ -25,7 +25,7 @@ credentials.
 
 ## Non-negotiables
 
-1. **Load the skill before the action, not after it fails.** Twenty-three
+1. **Load the skill before the action, not after it fails.** Twenty-four
    skills live in `.agents/skills/` (Claude Code reads them through links in
    `.claude/skills/`). `using-n8n-mcp-skills` is the router. Invoke the matching
    skill before writing an expression, configuring a node, designing a flow,
@@ -61,11 +61,19 @@ credentials.
    that someone else may depend on. The pre-tool guard denies delete calls and
    names the archive alternative.
 
+9. **Every workflow is tagged, in a project, in a folder.** The JSON carries
+   `tags`, `project` and `folder`; `lint-workflow --require-placement` fails
+   without them and `./scripts/organize.sh place` applies them after the
+   create. Credentials and Data Tables are created in the same project; a
+   workflow moved without them fails at its first run. `n8n-project-organization`
+   has the rule and the tool.
+
 ## Working order for any change
 
     drift-check → export-all + commit → change on dev → validate →
-    get_workflow and read connections → execute → verify the execution →
-    lint-workflow → promote through the agreed path → verify again on the target
+    get_workflow and read connections → organize place → execute →
+    verify the execution → lint-workflow → promote through the agreed path →
+    verify again on the target
 
 ## Toolkit
 
@@ -80,7 +88,8 @@ editor.
 | `./scripts/drift-check.sh [env]` | Before trusting `workflows/`. Exit 1 on drift |
 | `./scripts/export-all.sh [env]` | Before every change. The rollback point |
 | `./scripts/validate.sh <file>` | Before every deploy: structure |
-| `./scripts/lint-workflow.sh <file or dir>` | Before every promotion: environment literals, nameless credentials, `$env`, tags, error workflow; prints the credentials and variables the target needs |
+| `./scripts/lint-workflow.sh <file or dir>` | Before every promotion: environment literals, nameless credentials, `$env`, tags, placement, error workflow; prints the credentials and variables the target needs |
+| `./scripts/organize.sh audit\|place\|credentials\|tables\|project` | What sits where, and fixing it: untagged and personal-project workflows, credential and data table scope, batch placement, credential transfer, table copies |
 | `./scripts/wf-diff.sh <a> <b>` | What changed between two workflow files, ignoring canvas moves |
 | `./scripts/node-inventory.sh workflows/<env>` | Node types and typeVersions, the input to an upgrade plan |
 | `./scripts/gen-agent-configs.sh [--check]` | Regenerate the per-tool configs after editing `AGENTS.md`, `.mcp.json` or `.agents/skills/` |

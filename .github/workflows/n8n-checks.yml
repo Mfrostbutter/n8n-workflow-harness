@@ -35,7 +35,7 @@ jobs:
         run: |
           for d in workflows/*/; do
             ls "$d"*.json >/dev/null 2>&1 || continue
-            node scripts/lint-workflow.mjs "$d" --require-tags
+            node scripts/lint-workflow.mjs "$d" --require-tags --require-placement
           done
       - name: Semantic diff of changed workflows
         if: github.event_name == 'pull_request'

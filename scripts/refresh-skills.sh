@@ -32,7 +32,7 @@ n8n-binary-and-data n8n-error-handling n8n-multi-instance n8n-self-hosting
 n8n-subworkflows"
 
 # Never overwritten by this script.
-ORIGINAL="n8n-instance-ops n8n-enterprise-delivery n8n-node-dev n8n-gotchas n8n-canvas-docs n8n-promotion-pipeline n8n-workflow-as-code n8n-upgrade-plan"
+ORIGINAL="n8n-instance-ops n8n-enterprise-delivery n8n-node-dev n8n-gotchas n8n-canvas-docs n8n-promotion-pipeline n8n-workflow-as-code n8n-upgrade-plan n8n-project-organization"
 
 command -v git >/dev/null 2>&1 || { echo "git is required" >&2; exit 2; }
 
