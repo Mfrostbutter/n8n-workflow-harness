@@ -254,6 +254,8 @@ function run(script, wfs, extra = []) {
 const portable = {
   ...goodWorkflow,
   tags: ['acme'],
+  project: 'Acme Corp',
+  folder: 'Order intake',
   settings: { errorWorkflow: 'err-1' },
   nodes: [
     ...goodWorkflow.nodes,

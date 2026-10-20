@@ -78,6 +78,11 @@ and internal-registry paths. The instance servers reach only the URL in `.env`.
 - `./scripts/node-inventory.sh workflows/prod` lists every node type and
   typeVersion in use, which is the input to an upgrade plan (`n8n-upgrade-plan`)
   and to an approved-node review.
+- `./scripts/organize.sh audit <env>` lists every project with its workflow,
+  folder, credential and data table counts, the untagged workflows, the ones
+  still in a personal project, and every credential or data table a workflow
+  binds that its project cannot reach. `RESULT: ok` is the bar before a
+  hand-over.
 
 ## Hand-over checklist
 
@@ -86,5 +91,6 @@ and internal-registry paths. The instance servers reach only the URL in `.env`.
 - [ ] CI green on `main`, drift job scheduled, branch protection on
 - [ ] Promotion path chosen, documented in `AGENTS.md`, and exercised once end to end
 - [ ] Credentials and variables on staging and prod match the `lint-workflow` manifest
+- [ ] `./scripts/organize.sh audit` prints `RESULT: ok` on every environment
 - [ ] Managed settings deployed, or the hook configs confirmed on every editor in use
 - [ ] `ATTRIBUTION.md` and `THIRD_PARTY_LICENSES.md` kept in the hand-over copy

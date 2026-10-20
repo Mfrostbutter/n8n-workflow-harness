@@ -93,13 +93,14 @@ execution for the truth.
 Static checks on a workflow file or directory before it moves environments.
 Errors: local, private or environment-labelled hosts in a parameter, a
 credential reference with no name, a token-shaped literal. Warnings: no tags,
-no error workflow, pinned data, disabled nodes, TODO markers, `$env` or
-`process.env` in code, a webhook path that is a bare UUID. Exit 1 on an error,
-or on a warning with `--strict`.
+no `project` or `folder`, no error workflow, pinned data, disabled nodes, TODO
+markers, `$env` or `process.env` in code, a webhook path that is a bare UUID.
+Exit 1 on an error, or on a warning with `--strict`.
 
 It ends with the manifest: every credential name and type, every `$vars`
 reference, every sub-workflow reference, every host. That list is what the
 target environment must provide. Flags: `--require-tags`,
+`--require-placement` (both set by `npm run lint` and the CI templates),
 `--require-error-workflow`, `--allow-host <pattern>`.
 
 ## `wf-diff` — what changed
@@ -125,6 +126,31 @@ Every node type in use with its typeVersions and the workflows that carry each,
 mixed versions flagged, plus the credential types referenced. Feed it to the
 `n8n-upgrade-plan` skill before an instance upgrade, or to an approved-node
 review.
+
+## `organize` — projects, folders, tags, credential scope
+
+```bash
+./scripts/organize.sh audit dev
+./scripts/organize.sh place workflows/dev/order-intake.json dev --dry-run
+./scripts/organize.sh place workflows/dev dev
+./scripts/organize.sh credentials "Acme API" --to "Acme Corp" --env dev
+./scripts/organize.sh tables orders --to "Acme Corp" --env dev
+./scripts/organize.sh project "Acme Corp" dev
+```
+
+A workflow JSON carries `tags`, `project` and `folder`; `place` makes the
+instance agree. For every file with an `id`: the credentials only this batch
+uses are transferred into the project (one another workflow still uses is a
+stop, with the fix named), the workflow is transferred, the folder path is
+created, the folder and tags are set, and the result is read back. `--dry-run`
+prints the plan and writes nothing. `audit` lists every project with its
+counts, the untagged workflows, the ones left in a personal project, and every
+credential or data table a workflow binds that its project cannot reach;
+`RESULT: ok` or exit 1. `tables` recreates a data table inside a project with
+its rows and archives the original, because tables have no transfer endpoint;
+rebind the node ids it prints. Every command writes, so a named environment
+needs its own `N8N_API_URL_<ENV>` pair; there is no fallback to the bare one.
+The rule and the API detail: the `n8n-project-organization` skill.
 
 ## `gen-agent-configs` — one source per tool
 
@@ -154,7 +180,7 @@ staging or prod. [11-EDITORS.md](11-EDITORS.md) has the wiring per tool;
 
 Preflight over the whole clone: Node version, git, `.mcp.json` shape (including
 that `n8n-docs` carries no credentials), the n8n-mcp pin against what is
-actually installed, the node database, a real MCP handshake, all twenty-three
+actually installed, the node database, a real MCP handshake, all twenty-four
 skills and their `SKILL.md` files, the generated agent configs, the hooks
 executing cleanly, every toolkit script
 parsing, and whether `.env` is exported or accidentally tracked.
@@ -211,7 +237,7 @@ if offline delivery is the point of your copy. Regenerate whenever the pin in
 ```
 
 Re-vendors the fifteen upstream skills wholesale from
-`czlonkowski/n8n-skills`. Never touches the eight originals. Prints the upstream
+`czlonkowski/n8n-skills`. Never touches the nine originals. Prints the upstream
 commit so you can record it in `ATTRIBUTION.md`. Fails loudly if upstream has
 restructured and a skill it expects is gone.
 
@@ -250,8 +276,9 @@ Convenience wrappers, for anyone who reaches for npm first:
 | `npm run setup` | `./setup.sh` |
 | `npm run verify` | `./scripts/verify-setup.sh` |
 | `npm run smoke` | the MCP handshake |
-| `npm test` | toolkit, instance and guard tests |
-| `npm run lint` | `lint-workflow.mjs` |
+| `npm test` | toolkit, instance, organize and guard tests |
+| `npm run lint` | `lint-workflow.mjs --require-tags --require-placement` |
+| `npm run organize` | `organize.mjs audit` |
 | `npm run inventory` | `node-inventory.mjs` |
 | `npm run gen:agents` / `check:agents` | `gen-agent-configs.mjs` |
 | `npm run doctor` | `doctor.mjs` |
@@ -265,7 +292,8 @@ npm test
 ```
 
 `tools.test.mjs` covers the normaliser, diff, lint and inventory logic;
-`guard.test.mjs` the hook contract. `instance.test.mjs` runs the real HTTP paths against a fake n8n API
-server, so the instance-touching tools are covered offline with no instance
-involved. Pass explicit file paths: `node --test tests/` fails on current Node,
+`guard.test.mjs` the hook contract. `instance.test.mjs` and `organize.test.mjs`
+run the real HTTP paths against a fake n8n API server (workflows, executions,
+projects, folders, tags, credentials, data tables and the transfer endpoints),
+so the instance-touching tools are covered offline with no instance involved. Pass explicit file paths: `node --test tests/` fails on current Node,
 which resolves the directory as a module.

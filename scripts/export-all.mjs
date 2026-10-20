@@ -1,9 +1,22 @@
 // Snapshot every workflow from an instance into workflows/<env>/. The undo point.
 // Run and commit before any change. No AI required.
 // Usage: node scripts/export-all.mjs [env]   (default dev)
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIT_DIR, resolveTarget, api, apiAll, slugify, sortKeys, fail } from './lib.mjs';
+
+// Placement keys live only in the repo copy: the API never returns them, so an
+// export carries them over from the file it is about to replace.
+function placementOf(file) {
+  if (!existsSync(file)) return {};
+  try {
+    const prev = JSON.parse(readFileSync(file, 'utf8'));
+    const out = {};
+    if (typeof prev.project === 'string' && prev.project.trim()) out.project = prev.project;
+    if (typeof prev.folder === 'string' && prev.folder.trim()) out.folder = prev.folder;
+    return out;
+  } catch { return {}; }
+}
 
 const envName = process.argv[2] ?? 'dev';
 const target = resolveTarget(envName);
@@ -31,16 +44,19 @@ for (const { id } of list) {
   seen.set(slug, n);
   if (n > 1) slug = `${slug}-${id}`;
 
+  const file = join(outDir, `${slug}.json`);
   const snapshot = sortKeys({
+    id: body.id ?? id,
     name: body.name,
     nodes: body.nodes ?? [],
     connections: body.connections ?? {},
     settings: body.settings ?? {},
     active: body.active ?? false,
     tags: (body.tags ?? []).map((t) => t.name ?? t),
+    ...placementOf(file),
   });
 
-  writeFileSync(join(outDir, `${slug}.json`), `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+  writeFileSync(file, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
   console.log(`  ${slug}.json`);
   count += 1;
 }

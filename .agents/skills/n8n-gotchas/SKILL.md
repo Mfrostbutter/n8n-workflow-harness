@@ -35,6 +35,29 @@ event**. Executions run from that snapshot. Container restarts do not re-read it
 **Fix:** deactivate then activate. Verify against a fresh execution, not against
 the write's return code. Full treatment in `n8n-instance-ops`.
 
+### An API edit that an open editor tab silently reverts
+
+**Symptom:** you `PUT` a workflow (or use an MCP partial update), the call returns
+success, a read-back confirms the change, and the next run executes the old code
+anyway. Read the workflow again and your edit is gone.
+
+**Cause:** the editor is a competing writer, not a view. A browser tab holding the
+workflow keeps its own full copy in memory, and saving or pressing Test pushes that
+whole copy back, including nodes you never touched. Whoever writes last wins, and
+the tab wins by default because the human is still clicking.
+
+**Fix:** do not write over the API while the workflow is open in a tab. If you must,
+have the human hard-reload the tab afterwards and confirm the changed node body by
+eye before running. Compare `updatedAt` and `versionId` before and after: an
+`updatedAt` **later than the failing execution** is the tell that a browser save
+landed on top of you.
+
+**Observed 2026-08-26 on 2.35.5:** one Code node was fixed over the API three times
+and reverted twice by the same open tab. A node **added** in the same edit survived,
+because the tab picked it up on a page load, while the edited node body did not. So
+partial survival is normal and makes the revert harder to spot. The fastest exit is
+to hand the human the code and let them paste it in the tab that is winning.
+
 ### A tool sub-node with `onError` set, which makes the agent invent an answer
 
 **Symptom:** an AI Agent answers plausibly but wrongly. The execution is green, the
@@ -56,6 +79,38 @@ sub-workflows, which is correct for `main` connections and wrong here.
 produced a polite, well-formed access refusal that was indistinguishable from the
 real one. Nothing downstream can tell the difference. Always verify a tool's output
 is non-empty, not just that the run succeeded.
+
+### A tool node the agent cannot call, because only half the node exists
+
+**Symptom:** an AI Agent reports that a tool "encountered an error during
+execution" and quotes `The node '<type>' has a 'supplyData' method but no
+'execute' method`. The workflow validates, the canvas looks right, the `ai_tool`
+wire is there.
+
+**Cause:** the AI Agent at typeVersion 3.x invokes tools through the node's
+`execute` method. Some tool nodes only ship `supplyData`, which is what the older
+agent versions used. Those nodes still render, still connect, and still fail.
+
+**Fix:** check the node class before you wire it. Inside the container:
+
+```bash
+podman exec <container> node -e '
+const o = new (require("<path>/ToolX.node.js").ToolX)();
+const vs = o.nodeVersions ? Object.keys(o.nodeVersions) : o.description.version;
+console.log(vs);
+if (o.nodeVersions) for (const v of vs)
+  console.log(v, typeof o.nodeVersions[v].supplyData, typeof o.nodeVersions[v].execute);
+else console.log(typeof o.supplyData, typeof o.execute);'
+```
+
+A version showing `function undefined` cannot be driven by a 3.x agent.
+
+**Observed 2026-09-03 on 2.35.5:** `toolHttpRequest` maxes out at version 1.1 and
+has `supplyData` only, so a 3.x agent cannot call it at all. `toolWorkflow` v2.x
+has both. Wrap the HTTP call in a sub-workflow and attach that as the tool. This
+is not a workaround: the capability then enters the same governed catalogue as
+every other sub-agent, and identity is plumbed by the workflow rather than filled
+in by the model.
 
 ### MCP tag operations that no-op
 
@@ -183,6 +238,27 @@ cannot be triggered externally"). Add a temporary Webhook trigger plus a seed
 node for testing, and remove it before handoff. Reactivating a polling trigger
 **resets its baseline**, so re-seed test data each cycle.
 
+### The CLI cannot run a Data Table node, whatever the module env says
+
+**Symptom:** `n8n execute --id <id>` fails at the first Data Table node with
+`Attempted to use Data table node but the module is disabled`, on an instance
+where data tables plainly work: the UI lists them, the public API reads and
+writes their rows.
+
+**Cause:** modules load per process. The server process enables the data table
+module; the `execute` command starts its own process that does not. The error
+names the module, so it reads as an instance misconfiguration and sends you
+into compose files that are already correct.
+
+**Fix:** run it from the UI, or from a trigger the main process handles.
+Setting `N8N_ENABLED_MODULES=data-table` on the exec does not help. Since
+manual triggers cannot be fired externally either (above), the working recipe
+for verifying a data table workflow without a human at the canvas is the same
+temporary Webhook trigger: wire it, activate, `curl` it, then remove it and
+redeploy clean.
+
+**Observed 2026-08-26 on 2.35.5.**
+
 ### A polling trigger on its own output folder self-triggers
 
 **Symptom:** a workflow that writes a file into a watched location loops.
@@ -207,6 +283,59 @@ is instance-local.
 workflow JSON is not portable and why environment sync moves credential **stubs
 only**, never values.
 
+### The workflow API has no upsert, so a second run forks the workflow
+
+**Symptom:** you re-run a promotion or sync script and the target now has two
+workflows with the same name. Worse, if the script keeps an id map, the map now
+points at the copy, so your next update lands on the copy while the published,
+verified original goes stale.
+
+**Cause:** `POST /api/v1/workflows` always creates. There is no upsert, and
+nothing about the response tells you a same-named workflow already existed.
+
+**Fix:** keep an id map keyed by the source workflow's id, refuse to create when
+the map already has an entry, and require an explicit update flag that `PUT`s to
+the mapped id. When you do repair a fork, fix the map **before** the next update,
+not after: deleting the copy while the map still points at it silently sends the
+next write to a dead id.
+
+Observed 2026-09-04. Related: sub-workflow references are by id, so a fork also
+means half your callers point at one copy and half at the other.
+
+### A create rejected whole because one node names an unknown credential
+
+**Symptom:** `POST /api/v1/workflows` returns 400 `The workflow you are trying to
+save contains credentials that are not shared with you`. Nothing is created, and
+the message names no node.
+
+**Cause:** the node's `credentials` block carries an instance-local id. On the
+target that id belongs to nobody, and the create fails as a whole rather than
+warning on the one node.
+
+**Fix:** strip credential blocks during promotion and let a human pick them in
+the UI. Promotion moves credential **stubs**, never values. To find the offender,
+diff the credential ids in your payload against what the target actually has;
+note the public API has no credential-list endpoint, so read the ids off an
+existing workflow on that instance instead.
+
+### Cloud validates credentials on publish; the CLI does not
+
+**Symptom:** a workflow that published cleanly on a self-hosted or container
+instance refuses to publish on Cloud: `Cannot publish workflow: 1 node have
+configuration issues: Node "X": Missing required credential: <type>`.
+
+**Cause:** `publish:workflow` on the container does not validate node
+configuration. Cloud does, at publish time.
+
+**Why it bites harder than it looks:** an unpublishable sub-workflow makes every
+caller unpublishable too, because a caller cannot be published while it
+references an unpublished sub-workflow. One node with a missing credential can
+therefore block a whole chain that worked fine on the build instance.
+
+**Fix:** attach the credential, or disable the node so the rest of the chain can
+publish. Either way, "it published on the build instance" is not evidence it will
+publish on the target. Observed 2026-09-04 on 2.35.5 vs Cloud.
+
 ### CLI export/import array mismatch
 
 **Symptom:** `import:workflow --separate` fails on a file produced by
@@ -225,6 +354,39 @@ only**, never values.
 only, and unknown `settings` keys are rejected.
 
 **Fix:** strip everything else and whitelist `settings` keys before the `PUT`.
+
+### Data table rows have no `DELETE` on the collection
+
+**Symptom:** `DELETE /api/v1/data-tables/{id}/rows` returns
+`405 DELETE method not allowed`, on the same path where `GET` and `POST` work.
+
+**Cause:** row deletion lives on sub-routes. `DELETE .../rows/clear` empties the
+table. `DELETE .../rows/delete` takes a **required** `filter` query param, by
+design, so that emptying a table has to be the thing you asked for.
+
+**Fix:** `/api/v1/openapi.yml` is served off the instance without auth and is
+that version's own truth about the routes. Read it instead of guessing, which
+also surfaces `dryRun` on the filtered delete.
+
+### A workflow moved into a project runs without its credentials and Data Tables
+
+**Symptom:** `PUT /workflows/{id}/transfer` returns 204, the workflow is active
+in the new project, and the first execution fails: "node does not have access
+to credential", or `Data table with ID '...' could not be found in this
+project`.
+
+**Cause:** credentials and Data Tables are project-scoped like workflows, and
+a transfer moves only the workflow. Credentials have their own transfer
+endpoint; Data Tables have none, and the node binds the table by id.
+
+**Fix:** move the build as a set. Credentials used only by the batch:
+`PUT /credentials/{id}/transfer`. A credential other workflows share: a copy
+created with `projectId`. Data Tables: recreate in the project, copy the rows,
+rebind the node ids, archive the originals. `./scripts/organize.sh` in the toolkit does
+each step, and `place` refuses the workflow until the project can reach
+everything it binds. Full treatment in `n8n-project-organization`.
+Found 2026-10-19 on n8n 2.35.5 when a five-workflow build went 0/5 on its
+smoke run right after a clean transfer.
 
 ### Exported workflow JSON leaks
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-10-19 (b)
+
+Placement. Every workflow is tagged, in a project and in a folder, and the
+credentials and data tables it binds live in the same project.
+
+- New skill `n8n-project-organization` (24 skills, nine original): the
+  placement declared in the JSON, the organize tool, credentials and data
+  tables following a workflow into a project, reading placement back from an
+  API that is mostly write-only, retrofitting a grown instance.
+- `scripts/organize.mjs` (`./scripts/organize.sh`): `audit`, `place`,
+  `credentials`, `tables`, `project`. Node built-ins only; `tests/organize.test.mjs`
+  runs it against a fake public API.
+- `lint-workflow --require-placement` fails a file without `project` and
+  `folder`; `npm run lint` and both CI templates pass it. `export-all` now
+  writes the workflow `id` and keeps `project` and `folder` from the file it
+  replaces, so an export does not strip the placement.
+- The guard asks before `organize credentials --force`, which takes a
+  credential away from every workflow outside the destination.
+- `AGENTS.md` non-negotiable 9 and the toolkit row; `organize place` in the
+  working order. `n8n-gotchas` refreshed with eight entries, including the
+  post-transfer runtime failure.
+
 ## 2026-10-19
 
 Enterprise delivery. One contract for every agent, the official n8n MCP server

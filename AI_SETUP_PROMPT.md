@@ -46,7 +46,7 @@ credentials. If it fails, stop and show me the error: everything downstream
 depends on this.
 
 Then run ./scripts/verify-setup.sh and show me the result. It checks Node, git,
-the MCP config, the n8n-mcp pin and its node database, the 23 skills, the generated agent configs, the hooks,
+the MCP config, the n8n-mcp pin and its node database, the 24 skills, the generated agent configs, the hooks,
 and the toolkit. Fix anything it flags that is fixable without my input (missing
 executable bits, missing .env copied from .env.example, git init). Report
 anything that needs a decision from me instead of deciding for me.
