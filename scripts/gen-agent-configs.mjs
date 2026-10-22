@@ -12,8 +12,9 @@
 //   --link    symlink even on Windows (needs core.symlinks=true and Developer Mode)
 //
 // Windows: a checkout with core.symlinks=false turns the committed symlinks into
-// text files. Copies replace them and are marked skip-worktree so git neither
-// shows nor commits them. After a pull that changes a skill, run again.
+// text files. Copies replace them; the symlink entries are marked skip-worktree
+// (status stays clean) and .gitignore excludes the copies' contents (add -A
+// never stages them). After a pull that changes a skill, run again.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, lstatSync, symlinkSync, rmSync, cpSync, readlinkSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';

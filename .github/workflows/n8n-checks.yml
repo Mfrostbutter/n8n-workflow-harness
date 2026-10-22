@@ -27,10 +27,14 @@ jobs:
       - run: npm ci --no-fund --no-audit
       - run: npm test
       - name: Generated configs and skills (copies on Windows)
+        shell: bash
         run: |
           node scripts/gen-agent-configs.mjs
           node scripts/gen-agent-configs.mjs --check
-          git status --porcelain -- .claude/skills
+          # The copies must never reach the index: every tracked entry stays a symlink, status stays clean.
+          test -z "$(git status --porcelain -- .claude/skills)"
+          test "$(git ls-files -s .claude/skills | grep -vc '^120000')" = 0
+          git add -A --dry-run | grep -q 'skills/' && { echo 'skill copies would be added'; exit 1; } || true
       - name: Hooks run clean on this platform
         shell: bash
         run: |

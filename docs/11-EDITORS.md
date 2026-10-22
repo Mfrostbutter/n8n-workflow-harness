@@ -131,8 +131,10 @@ real tools; call those directly. Four things differ:
    `.agents/skills/`. With `core.symlinks=false` (the Git for Windows default)
    a checkout turns each one into a text file holding the link target, and
    Claude Code loads no project skills. `gen-agent-configs.mjs` copies the
-   skills on Windows instead and marks the copies `skip-worktree`, so
-   `git status` stays clean and nothing is committed. `setup.ps1` runs it;
+   skills on Windows instead, marks the symlink entries `skip-worktree` so
+   `git status` stays clean, and `.gitignore` excludes the copies' contents so
+   `git add -A` never stages them (skip-worktree alone does not stop that).
+   `setup.ps1` runs it;
    run `node scripts\gen-agent-configs.mjs` again after a pull that changes a
    skill. Alternative: Developer Mode plus
    `git clone -c core.symlinks=true ...`, then `--link` keeps the real links.

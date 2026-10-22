@@ -8,8 +8,11 @@ Windows 11 clone before it was fixed.
 - **Skills on Windows.** A default checkout (`core.symlinks=false`) turns the
   25 committed `.claude/skills/` symlinks into text files and Claude Code loads
   no project skills. `gen-agent-configs.mjs` now copies on Windows by default
-  (`--link` to opt out) and marks the copies `skip-worktree`, so git neither
-  shows nor commits them. `setup.ps1` runs it, installs the pinned n8n-mcp,
+  (`--link` to opt out), marks the symlink entries `skip-worktree` (clean
+  status) and `.gitignore` excludes the copies' contents (`git add -A` never
+  stages them; skip-worktree alone does not prevent that). CI asserts every
+  tracked entry under `.claude/skills/` is still a symlink. `setup.ps1` runs
+  the generator, installs the pinned n8n-mcp,
   wires the textconv and runs the preflight, matching `setup.sh`.
 - **Hooks are Node.** `session-start.sh` and `pre-n8n-write.sh` became
   `.mjs`, registered as `node .claude/hooks/<name>.mjs` with repo-relative
