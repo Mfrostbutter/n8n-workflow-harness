@@ -125,7 +125,11 @@ prompt:
 
 Everything runs natively under PowerShell except the `.sh` wrappers, which
 need Git for Windows (`bash.exe`). The `.mjs` scripts behind them are the
-real tools; call those directly. Four things differ:
+real tools; call those directly. Use Node 24: `isolated-vm` (via `@n8n/expression-runtime`) in the
+has a Windows prebuild for that line only, and older lines
+need Visual Studio Build Tools to compile it
+([09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#npm-ci-fails-on-isolated-vm-node-gyp-could-not-find-a-version-of-visual-studio)).
+Four things differ:
 
 1. **Skill symlinks.** `.claude/skills/` is committed as symlinks into
    `.agents/skills/`. With `core.symlinks=false` (the Git for Windows default)

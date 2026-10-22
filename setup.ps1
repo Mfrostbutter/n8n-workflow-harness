@@ -25,6 +25,13 @@ $v = (& node --version) -replace '^v', ''
 $maj = [int]($v -split '\.')[0]
 if ($maj -lt 20) { Write-Error "node $v is too old. Install Node 20+ and re-run."; exit 2 }
 Note "node $v"
+# isolated-vm (via @n8n/expression-runtime) ships Windows prebuilds for Node 24 only.
+# Older lines compile it with node-gyp, which needs Visual Studio Build Tools (C++) and Python.
+if ($maj -lt 24) {
+  Note "node $v on Windows: npm ci will compile isolated-vm from source and needs Visual Studio"
+  Note "Build Tools (Desktop development with C++) plus Python. Node 24 installs a prebuilt binary"
+  Note "in seconds. If npm ci fails on isolated-vm below, install Node 24 and re-run."
+}
 
 Step 'n8n-mcp (the engine: node schemas, validation, templates)'
 $pin = (& node -p "require('./package.json').dependencies['n8n-mcp']")

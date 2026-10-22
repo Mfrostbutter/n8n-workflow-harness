@@ -46,6 +46,10 @@ Windows 11 clone before it was fixed.
 - **Context budget.** `AGENTS.md` and the prompt recipes say which tool forms
   to prefer, with measured sizes (`search_templates` default ~115 KB,
   `get_node` full on HTTP Request ~54 KB, `minimal` under 400 bytes).
+- **Node 24 on Windows.** `isolated-vm` (via `@n8n/expression-runtime`) ships prebuilds
+  for Node 24 only; on 20/22 `npm ci` compiles it and fails without Visual
+  Studio Build Tools. `setup.ps1` and `setup.sh` say so before installing,
+  docs 02/09/11 carry it, CI tests on Node 24.
 - `secret-map`: `N8N_INFISICAL_CLI` names the Infisical CLI when it is not
   `infisical` on PATH; a `.js`/`.cjs`/`.mjs` path runs under Node. The test
   fake uses it, since Windows cannot spawn a shebang script, and the test's

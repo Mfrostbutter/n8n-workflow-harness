@@ -168,9 +168,18 @@ instance prints the underlying code (`ECONNREFUSED`, `ENOTFOUND`,
 `DEPTH_ZERO_SELF_SIGNED_CERT`) with the matching fix instead of a bare
 `fetch failed`.
 
+## `npm ci` fails on `isolated-vm` (`node-gyp`, "could not find a version of Visual Studio")
+
+`isolated-vm`, a native module pulled in through `@n8n/expression-runtime`, ships prebuilt
+binaries for Node 24 (`darwin-arm64`, `linux-x64`, `linux-arm64`,
+`win32-x64`). On Node 20 or 22 npm compiles it instead, which on Windows
+needs Visual Studio Build Tools with the C++ workload and Python, and on
+macOS or Linux a C++ toolchain. Install Node 24 and run `npm ci` again; the
+install then takes seconds. CI runs the suite on Node 24 for the same reason.
+
 ## Windows
 
-Git for Windows, Node 20+, PowerShell: `.\setup.ps1`. The `.mjs` tools and the
+Git for Windows, Node 24, PowerShell: `.\setup.ps1`. The `.mjs` tools and the
 hooks run natively; only the `.sh` wrappers need Git Bash. The two things that
 differ from macOS and Linux are the skill symlinks (above) and the proxy
 variables (above). The full list is in [11-EDITORS.md](11-EDITORS.md#windows).

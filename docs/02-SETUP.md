@@ -8,7 +8,7 @@ The full path, with the reasoning. For the fast version see
 
 | Need | Why | Check |
 |---|---|---|
-| Node 20+ and npm | The n8n-mcp servers, the CLI and the whole toolkit | `node --version` |
+| Node 20+ and npm (24 recommended, required on Windows without build tools) | The n8n-mcp servers, the CLI and the whole toolkit. `isolated-vm` (via `@n8n/expression-runtime`) ships prebuilt binaries for Node 24; on older lines `npm ci` compiles it and needs a C++ toolchain | `node --version` |
 | Git | Rollback. Without it there is no undo | `git --version` |
 | Claude Code | The harness itself | `claude --version` |
 | n8n instance, public API on | Anything that touches a workflow | Settings → n8n API |
