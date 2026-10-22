@@ -85,6 +85,8 @@ references only:
   `env:` references, never baked into a secret.
 - **`_secrets`**: `provider` is `infisical` (default), `cmd` (a template in
   `N8N_SECRET_CMD` with `{name}`, for Vault or another CLI), or `env`.
+  `N8N_INFISICAL_CLI` names the Infisical CLI when it is not `infisical` on
+  PATH (a `.js`/`.cjs`/`.mjs` path runs under Node).
 
 Naming that holds up: secrets `UPPER_SNAKE`, under a path per repo or team,
 with the environment as the secret manager's environment rather than in the

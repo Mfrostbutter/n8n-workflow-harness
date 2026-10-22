@@ -28,6 +28,10 @@ function resolveEntry() {
   return null;
 }
 
+// n8n-mcp ships its SSRF guard in strict mode, which refuses loopback and RFC1918
+// instance URLs. A dev box on the LAN is exactly that. Permissive unless the caller set it.
+if (!process.env.WEBHOOK_SECURITY_MODE) process.env.WEBHOOK_SECURITY_MODE = 'permissive';
+
 const entry = resolveEntry();
 if (!entry) {
   // stderr, never stdout: stdout is the MCP transport.

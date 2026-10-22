@@ -118,6 +118,18 @@ For Code nodes, call `tools_documentation({topic: "javascript_code_node_guide"})
 Several of these are version-gated. `n8n_health_check` reports the version; if a
 tool 404s, check that before assuming it is broken.
 
+**Private instance addresses.** n8n-mcp validates `N8N_API_URL` against an
+SSRF guard before every call. In its default `strict` mode that refuses
+`localhost` and RFC1918 addresses, which is where most dev instances live, and
+every `n8n_*` tool then answers `SSRF protection: Private IP addresses not
+allowed` (`moderate` still blocks private IPs). `scripts/mcp-server.mjs` runs
+the server with `WEBHOOK_SECURITY_MODE=permissive` unless the environment sets
+a value, and `.mcp.json` passes the variable through, so a LAN or loopback
+instance works out of the box. The guard also covers the webhook URLs
+`n8n_test_workflow` calls. Set the variable to `strict` yourself if the
+instance is public and you want the guard back; `doctor` prints the mode in
+force and fails when it would block the configured URL.
+
 ### Draft versus published
 
 `n8n_get_workflow` distinguishes `mode: 'full'` (the **draft** graph) from

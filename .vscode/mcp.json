@@ -24,6 +24,11 @@
     },
     {
       "type": "promptString",
+      "id": "WEBHOOK_SECURITY_MODE",
+      "description": "WEBHOOK_SECURITY_MODE (leave blank if not used)"
+    },
+    {
+      "type": "promptString",
       "id": "N8N_MCP_ACCESS_TOKEN",
       "description": "N8N_MCP_ACCESS_TOKEN (leave blank if not used)",
       "password": true
@@ -57,6 +62,7 @@
         "N8N_API_KEY": "${input:N8N_API_KEY}",
         "N8N_CF_CLIENT_ID": "${input:N8N_CF_CLIENT_ID}",
         "N8N_CF_CLIENT_SECRET": "${input:N8N_CF_CLIENT_SECRET}",
+        "WEBHOOK_SECURITY_MODE": "${input:WEBHOOK_SECURITY_MODE}",
         "N8N_MCP_TELEMETRY_DISABLED": "true"
       }
     },

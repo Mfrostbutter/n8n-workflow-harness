@@ -21,7 +21,7 @@
 // a personal workflow is never transferred and its credential scope is not checked.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { loadEnv, resolveTarget, request, apiAll, fail } from './lib.mjs';
+import { loadEnv, resolveTarget, request, apiAll, fail, ExitSignal } from './lib.mjs';
 
 export const PERSONAL = 'personal';
 const errText = (r) => r.error ?? r.body?.message ?? (r.body ? JSON.stringify(r.body).slice(0, 300) : '');
@@ -517,7 +517,7 @@ async function main(argv) {
   const pos = args.filter((a) => !a.startsWith('--'));
   if (!pos.length) fail(USAGE);
   const [cmd, ...rest] = pos;
-  if (cmd === 'audit') process.exit(await cmdAudit(writeTarget(rest[0])));
+  if (cmd === 'audit') { process.exitCode = await cmdAudit(writeTarget(rest[0])); return; }
   if (cmd === 'place') {
     if (!rest.length) fail('usage: organize.sh place <workflow.json|dir> [env] [--dry-run]');
     await cmdPlace(writeTarget(rest[1]), rest[0], flags.has('--dry-run'));
@@ -525,11 +525,13 @@ async function main(argv) {
   }
   if (cmd === 'credentials') {
     if (!rest.length || !to) fail('usage: organize.sh credentials <name>... --to <project> [--env <env>] [--force]');
-    process.exit(await cmdCredentials(writeTarget(envFlag), rest, to, flags.has('--force')));
+    process.exitCode = await cmdCredentials(writeTarget(envFlag), rest, to, flags.has('--force'));
+    return;
   }
   if (cmd === 'tables') {
     if (!rest.length || !to) fail('usage: organize.sh tables <name>... --to <project> [--env <env>] [--no-rows]');
-    process.exit(await cmdTables(writeTarget(envFlag), rest, to, !flags.has('--no-rows')));
+    process.exitCode = await cmdTables(writeTarget(envFlag), rest, to, !flags.has('--no-rows'));
+    return;
   }
   if (cmd === 'project') {
     if (!rest.length) fail('usage: organize.sh project <name> [env]');
@@ -542,5 +544,5 @@ async function main(argv) {
 }
 
 if (process.argv[1] && /organize\.mjs$/.test(process.argv[1])) {
-  main(process.argv.slice(2)).catch((e) => fail(e.message));
+  main(process.argv.slice(2)).catch((e) => { if (!(e instanceof ExitSignal)) fail(e.message); });
 }

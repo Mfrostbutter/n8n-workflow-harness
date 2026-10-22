@@ -159,16 +159,24 @@ fi
 echo
 echo "== hooks"
 for h in session-start pre-n8n-write; do
-  if [ -x ".claude/hooks/$h.sh" ]; then
-    if echo '{"tool_name":"t","tool_input":{}}' | "./.claude/hooks/$h.sh" >/dev/null 2>&1; then
-      ok "$h.sh runs clean"
+  if [ -f ".claude/hooks/$h.mjs" ]; then
+    if echo '{"tool_name":"t","tool_input":{}}' | node ".claude/hooks/$h.mjs" >/dev/null 2>&1; then
+      ok "$h.mjs runs clean"
     else
-      bad "$h.sh returned non-zero. Hooks must fail open."
+      bad "$h.mjs returned non-zero. Hooks must fail open."
     fi
   else
-    bad ".claude/hooks/$h.sh missing or not executable"
+    bad ".claude/hooks/$h.mjs missing"
   fi
 done
+# Repo-relative hook commands run in every client; $CLAUDE_PROJECT_DIR exists only inside Claude Code.
+if grep -q 'CLAUDE_PROJECT_DIR' .claude/settings.json 2>/dev/null; then
+  bad ".claude/settings.json hooks reference \$CLAUDE_PROJECT_DIR; use repo-relative 'node .claude/hooks/<name>.mjs'"
+fi
+# Windows checkout with core.symlinks=false: the skill links are text files until the generator copies them.
+if [ -e .claude/skills/using-n8n-mcp-skills ] && [ ! -d .claude/skills/using-n8n-mcp-skills ]; then
+  bad ".claude/skills/ holds symlink stubs, not skills (Windows checkout). Run: node scripts/gen-agent-configs.mjs --copy"
+fi
 [ -f .claude/settings.json ] && command -v node >/dev/null 2>&1 && \
   node -e 'JSON.parse(require("fs").readFileSync(".claude/settings.json","utf8"))' 2>/dev/null \
   && ok ".claude/settings.json is valid JSON" \

@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh\"",
+            "command": "node .claude/hooks/session-start.mjs",
             "timeout": 10
           }
         ]
@@ -75,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-n8n-write.sh\"",
+            "command": "node .claude/hooks/pre-n8n-write.mjs",
             "timeout": 10
           }
         ]
@@ -85,7 +85,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-pre-tool.mjs\"",
+            "command": "node scripts/guard-pre-tool.mjs",
             "timeout": 10
           }
         ]

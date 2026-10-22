@@ -1,5 +1,56 @@
 # Changelog
 
+## 2026-10-22
+
+Windows, VS Code + Copilot, corporate proxies. Everything reproduced on a
+Windows 11 clone before it was fixed.
+
+- **Skills on Windows.** A default checkout (`core.symlinks=false`) turns the
+  25 committed `.claude/skills/` symlinks into text files and Claude Code loads
+  no project skills. `gen-agent-configs.mjs` now copies on Windows by default
+  (`--link` to opt out) and marks the copies `skip-worktree`, so git neither
+  shows nor commits them. `setup.ps1` runs it, installs the pinned n8n-mcp,
+  wires the textconv and runs the preflight, matching `setup.sh`.
+- **Hooks are Node.** `session-start.sh` and `pre-n8n-write.sh` became
+  `.mjs`, registered as `node .claude/hooks/<name>.mjs` with repo-relative
+  paths. No bash, no `$CLAUDE_PROJECT_DIR`, so the same file is harmless when
+  VS Code loads it.
+- **Copilot guard.** `.github/hooks/n8n-guard.json` uses the cross-platform
+  `command` key (Copilot picks `bash` or `powershell` from it). The guard
+  answers Copilot with `{"permissionDecision": "deny" | "ask", ...}` on
+  stdout and exit 0; a non-zero exit is a plain error there. Copilot can ask,
+  so it does. Tested in `tests/guard.test.mjs`.
+- **SSRF guard.** n8n-mcp 2.94 refuses loopback and RFC1918 instance URLs in
+  its default `strict` mode; every `n8n_*` call returned
+  `SSRF protection: Private IP addresses not allowed` against an on-prem
+  instance while the toolkit passed. `scripts/mcp-server.mjs` defaults
+  `WEBHOOK_SECURITY_MODE=permissive`, `.mcp.json` passes it through, `doctor`
+  prints the mode and fails when it would block the configured URL.
+- **doctor.** Used `??` on the per-environment lookup, so a template `.env`
+  with blank `N8N_API_URL_DEV=` lines made `doctor dev` fail with the active
+  pair exported. Now `||`, and `loadEnv` treats a blank value as unset.
+  Status-0 errors carry the cause code (`ECONNREFUSED`,
+  `DEPTH_ZERO_SELF_SIGNED_CERT`) instead of `fetch failed`, and doctor prints
+  the matching fix: `NODE_EXTRA_CA_CERTS` for TLS inspection,
+  `NODE_USE_ENV_PROXY=1` for a proxy, never `NODE_TLS_REJECT_UNAUTHORIZED=0`
+  (which it now fails on). It also lists the proxy variables in force, names
+  and lengths only.
+- **Exit codes on Windows.** `fail()` and the `organize` / `secret-map`
+  entrypoints called `process.exit()` right after a fetch; on Windows that
+  fast-fails with a libuv assertion (exit 3221226505) and 12 tests failed.
+  `fail()` now throws an `ExitSignal` and sets `process.exitCode`; the scripts
+  end on their own.
+- **Context budget.** `AGENTS.md` and the prompt recipes say which tool forms
+  to prefer, with measured sizes (`search_templates` default ~115 KB,
+  `get_node` full on HTTP Request ~54 KB, `minimal` under 400 bytes).
+- `secret-map`: `N8N_INFISICAL_CLI` names the Infisical CLI when it is not
+  `infisical` on PATH; a `.js`/`.cjs`/`.mjs` path runs under Node. The test
+  fake uses it, since Windows cannot spawn a shebang script, and the test's
+  PATH now uses the platform delimiter.
+- Docs: 02 (Windows, proxy, private addresses), 09 (SSRF, proxy, Windows),
+  11 (Windows section, Copilot asks). `tests/network.test.mjs`. CI runs the
+  test suite on Ubuntu and Windows.
+
 ## 2026-10-19 (c)
 
 Credential mapping. Every credential on an instance traces to a named secret.

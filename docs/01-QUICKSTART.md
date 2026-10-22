@@ -13,7 +13,8 @@ cd n8n-workflow-harness
 
 Windows: `.\setup.ps1`. This sets execute bits, **installs the pinned
 `n8n-mcp` via `npm ci`**, creates `.env` from the template, runs `git init` if
-needed, and finishes with a preflight.
+needed, generates the editor configs and skill links (copies on Windows), and
+finishes with a preflight.
 
 The n8n-mcp install is ~100 MB and takes a minute: it carries a prebuilt
 database of every n8n node, which is what makes the schemas and validation

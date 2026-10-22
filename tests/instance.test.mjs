@@ -93,11 +93,11 @@ beforeEach(() => {
  * Async on purpose: the fake server runs in THIS process, so a synchronous
  * spawn would block the event loop and the server could never answer.
  */
-async function run(tool, args = []) {
+async function run(tool, args = [], env = {}) {
   try {
     const { stdout } = await execFileAsync(process.execPath, [join(kit, 'scripts', tool), ...args], {
       encoding: 'utf8',
-      env: { ...process.env, N8N_API_URL: base, N8N_API_KEY: 'test-key' },
+      env: { ...process.env, N8N_API_URL: base, N8N_API_KEY: 'test-key', ...env },
     });
     return { code: 0, out: stdout };
   } catch (e) {
@@ -252,6 +252,42 @@ test('doctor reports a rejected key rather than crashing', async () => {
   const r = await run('doctor.mjs', ['dev']);
   assert.equal(r.code, 1);
   assert.match(r.out, /API key rejected/);
+});
+
+test('doctor passes with a template .env (blank per-env lines) and the active pair exported', async () => {
+  execFileSync('git', ['init', '-q'], { cwd: kit });
+  writeFileSync(join(kit, '.gitignore'), '.env\n');
+  writeFileSync(join(kit, '.env'), 'N8N_API_URL=\nN8N_API_KEY=\nN8N_API_URL_DEV=\nN8N_API_KEY_DEV=\nN8N_API_URL_PROD=\n');
+  const r = await run('doctor.mjs', ['dev']);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /URL for "dev"/);
+  assert.match(r.out, /SSRF mode: permissive/);
+});
+
+test('doctor flags a strict SSRF mode against a loopback instance', async () => {
+  writeFileSync(join(kit, '.env'), `N8N_API_URL=${base}\nN8N_API_KEY=test-key\n`);
+  const r = await run('doctor.mjs', ['dev'], { WEBHOOK_SECURITY_MODE: 'strict' });
+  assert.equal(r.code, 1);
+  assert.match(r.out, /managed n8n MCP server will refuse 127\.0\.0\.1/);
+  assert.match(r.out, /SSRF protection/);
+});
+
+test('doctor names the cause and the fix when the instance is unreachable', async () => {
+  writeFileSync(join(kit, '.env'), `N8N_API_URL=${base}\nN8N_API_KEY=test-key\n`);
+  // A port that was just released: closed, but not a reserved one Windows refuses differently.
+  const probe = createServer();
+  await new Promise((r) => probe.listen(0, '127.0.0.1', r));
+  const closed = `http://127.0.0.1:${probe.address().port}`;
+  await new Promise((r) => probe.close(r));
+  const r = await run('doctor.mjs', ['dev'], { N8N_API_URL: closed });
+  assert.equal(r.code, 1);
+  assert.match(r.out, /unreachable \(ECONNREFUSED/);
+  assert.match(r.out, /nothing is listening/);
+  const viaProxy = await run('doctor.mjs', ['dev'], { N8N_API_URL: closed, HTTPS_PROXY: 'http://127.0.0.1:1' });
+  assert.match(viaProxy.out, /NODE_USE_ENV_PROXY=1/);
+  const tls = await run('doctor.mjs', ['dev'], { NODE_TLS_REJECT_UNAUTHORIZED: '0' });
+  assert.match(tls.out, /NODE_EXTRA_CA_CERTS/);
+  assert.equal(tls.code, 1);
 });
 
 test('doctor warns when the active target is production', async () => {

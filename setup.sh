@@ -35,8 +35,8 @@ else
 fi
 
 echo "== script permissions"
-run chmod +x scripts/*.sh .claude/hooks/*.sh
-echo "  scripts and hooks are executable"
+run chmod +x scripts/*.sh
+echo "  scripts are executable (hooks are .mjs and run through node)"
 
 echo "== n8n-mcp (the engine: node schemas, validation, templates)"
 PIN="$(node -p "require('./package.json').dependencies['n8n-mcp']" 2>/dev/null || echo '?')"
