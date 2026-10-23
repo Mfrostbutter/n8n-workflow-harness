@@ -43,7 +43,7 @@ installs offline from there instead.
 
 It does **not** write credentials and does **not** contact an instance.
 
-`--global-skills` additionally copies the twenty-five skills into
+`--global-skills` additionally copies the twenty-six skills into
 `~/.claude/skills/` so they load in every project, backing up anything it
 replaces. You do not need this to use the harness: skills in
 `.agents/skills/` (linked into `.claude/skills/`) already load whenever Claude
@@ -124,7 +124,7 @@ variable yourself; `doctor` tells you which mode is in force.
 ```
 
 Checks Node version, git, `.mcp.json` shape (including that `n8n-docs` carries
-no credentials), all twenty-five skills and their `SKILL.md` files, the
+no credentials), all twenty-six skills and their `SKILL.md` files, the
 generated agent configs, the hooks executing cleanly, every toolkit script parsing, and whether `.env` is exported
 or accidentally tracked. Exit 0 and `RESULT: ok`, or exit 1 and `RESULT: BLOCKED`.
 

@@ -1,6 +1,6 @@
 # n8n workflow harness
 
-A coding-agent harness for building and promoting n8n workflows: twenty-five
+A coding-agent harness for building and promoting n8n workflows: twenty-six
 n8n skills, **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)** pinned as a
 real dependency next to n8n's own instance MCP server, the official `@n8n/cli`
 for promotions, a deterministic toolkit, and the discipline that keeps a
@@ -45,7 +45,7 @@ This harness closes that gap three ways:
    and the instance's own MCP server owns the build loop, version history and
    publish. The harness pins the package and verifies both rather than hoping
    npm resolves it.
-2. **Skills that fire before the mistake.** Twenty-five skills carry the rules for
+2. **Skills that fire before the mistake.** Twenty-six skills carry the rules for
    expressions, node configuration, Code nodes, AI agents, error handling, and
    the field-discovered traps that look like success.
 3. **Verification that does not trust the model.** A Node-only toolkit that
@@ -70,7 +70,7 @@ package.json                pins n8n-mcp, @n8n/cli, @n8n/workflow-sdk; package-l
 .env.example                instance URL, API key, MCP access token template
 .gitattributes              git diff on workflows/ shows behavior, not canvas moves
 .github/workflows/          CI: validate and lint on push, drift on a schedule (.gitlab-ci.yml too)
-.agents/skills/             25 skills, read by Codex, Cursor, Copilot, Devin, Junie
+.agents/skills/             26 skills, read by Codex, Cursor, Copilot, Devin, Junie
 .claude/
   settings.json             permissions, hooks, the guard
   skills/                   links into .agents/skills/                    generated
@@ -125,7 +125,7 @@ promote through the agreed path → verify again on the target
 
 ## Skills
 
-Twenty-five skills in `.agents/skills/`, discovered by Codex, Cursor, Copilot,
+Twenty-six skills in `.agents/skills/`, discovered by Codex, Cursor, Copilot,
 Devin and Junie, and linked into `.claude/skills/` for Claude Code. `using-n8n-mcp-skills` is the router: it fires first and
 points at the specialist that owns the decision.
 
@@ -146,7 +146,8 @@ points at the specialist that owns the decision.
 | `n8n-binary-and-data` | Files, `$binary`, keeping binary alive across transforms |
 | `n8n-error-handling` | Error outputs, retries, Error Trigger, 4xx/5xx shapes |
 | `n8n-subworkflows` | Execute Workflow, typed inputs, `all` vs `each` |
-| `n8n-canvas-docs` | Sticky notes and canvas groups, sizing math, no overlaps |
+| `n8n-canvas-docs` | Zone stickies from a spec: generator, layout checker, headless screenshot loop |
+| `n8n-workflow-map` | Workflow JSON to a Figma workflow map and architecture map, through the Figma MCP |
 
 **Operations and delivery**
 
@@ -164,7 +165,7 @@ points at the specialist that owns the decision.
 | `n8n-self-hosting` | Deploying n8n itself: Docker Compose, Caddy, queue mode |
 | `n8n-node-dev` | Custom node packaging, the every-worker rule, air-gapped install |
 
-Fifteen are vendored from the upstream `n8n-skills` pack; ten are original to
+Fifteen are vendored from the upstream `n8n-skills` pack; eleven are original to
 this harness. See [ATTRIBUTION.md](ATTRIBUTION.md) and
 [docs/04-SKILLS.md](docs/04-SKILLS.md).
 
@@ -305,7 +306,7 @@ a user cannot edit, see `docs/managed-settings.example.json`.
 | Three MCP servers | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Toolkit | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Contract (`AGENTS.md`) auto-loaded | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 25 skills discovered | ✅ | ✅ | ✅ | ✅ | ✅ | read on demand |
+| 26 skills discovered | ✅ | ✅ | ✅ | ✅ | ✅ | read on demand |
 | Pre-tool guard | ask | ask | deny | deny | deny | ❌ |
 | Session-start injection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
@@ -367,7 +368,7 @@ real work are MIT-licensed and both by **Romuald Członkowski**:
 - **[n8n-mcp](https://github.com/czlonkowski/n8n-mcp)**, the server behind every
   schema lookup and validation call in this repo
 - **[n8n-skills](https://github.com/czlonkowski/n8n-skills)**, fifteen of the
-  twenty-five skills
+  twenty-six skills
 
 `@n8n/cli` and `@n8n/workflow-sdk` are n8n GmbH packages under the Sustainable
 Use License, pinned as dependencies and not redistributed here.

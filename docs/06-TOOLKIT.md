@@ -213,7 +213,7 @@ staging or prod. [11-EDITORS.md](11-EDITORS.md) has the wiring per tool;
 
 Preflight over the whole clone: Node version, git, `.mcp.json` shape (including
 that `n8n-docs` carries no credentials), the n8n-mcp pin against what is
-actually installed, the node database, a real MCP handshake, all twenty-five
+actually installed, the node database, a real MCP handshake, all twenty-six
 skills and their `SKILL.md` files, the generated agent configs, the hooks
 executing cleanly, every toolkit script
 parsing, and whether `.env` is exported or accidentally tracked.

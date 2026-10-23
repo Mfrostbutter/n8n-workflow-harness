@@ -108,6 +108,20 @@ Windows 11 clone before it was fixed.
   11 (Windows section, Copilot asks). `tests/network.test.mjs`. CI runs the
   test suite on Ubuntu and Windows.
 
+## 2026-10-23
+
+Canvas and maps. The canvas is documented from a spec, and the JSON draws its own diagram.
+
+- `n8n-canvas-docs` replaced with the zone-board version: a zone spec you write,
+  `scripts/zone_layout.py` sizes and tiles the stickies by rule,
+  `scripts/layout_check.py` is the gate (`RESULT: ok`), `scripts/shoot.js`
+  screenshots the canvas headless (playwright-core plus a local Chromium).
+- New skill `n8n-workflow-map` (26 skills, eleven original):
+  `scripts/workflow-map.py` (stdlib Python) turns exported workflow JSON plus
+  the zone stickies into Figma Plugin API scripts the Figma MCP runs: a
+  workflow map per page and a hand-modelled architecture page.
+- README, docs 02, 04, 06, `refresh-skills.sh` originals list.
+
 ## 2026-10-19 (c)
 
 Credential mapping. Every credential on an instance traces to a named secret.

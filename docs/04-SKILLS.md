@@ -1,6 +1,6 @@
 # Skills
 
-Twenty-five skills live in `.agents/skills/`, the directory Codex, Cursor,
+Twenty-six skills live in `.agents/skills/`, the directory Codex, Cursor,
 Copilot, Devin and Junie read natively. `npm run gen:agents` links them into
 `.agents/skills/` for Claude Code. Nothing to install.
 
@@ -40,6 +40,7 @@ explains it.
 | Wire error outputs, retries, an error workflow | `n8n-error-handling` |
 | Extract a sub-workflow, or use Execute Workflow | `n8n-subworkflows` |
 | Add sticky notes or canvas groups | `n8n-canvas-docs` |
+| Draw the workflows as a Figma map or an architecture diagram | `n8n-workflow-map` |
 | Deploy, activate, or debug something already live | `n8n-instance-ops` |
 | Work out why something "succeeded" and did nothing | `n8n-gotchas` |
 | Target the right instance among several | `n8n-multi-instance` |
@@ -71,10 +72,11 @@ Romuald Członkowski): `using-n8n-mcp-skills`, `n8n-mcp-tools-expert`,
 `n8n-code-tool`, `n8n-agents`, `n8n-binary-and-data`, `n8n-error-handling`,
 `n8n-multi-instance`, `n8n-self-hosting`, `n8n-subworkflows`.
 
-**Ten original** to this harness, written from enterprise delivery work:
+**Eleven original** to this harness, written from enterprise delivery work:
 `n8n-instance-ops`, `n8n-enterprise-delivery`, `n8n-node-dev`, `n8n-gotchas`,
 `n8n-canvas-docs` (adapted), `n8n-promotion-pipeline`, `n8n-workflow-as-code`,
-`n8n-upgrade-plan`, `n8n-project-organization`, `n8n-credential-mapping`.
+`n8n-upgrade-plan`, `n8n-project-organization`, `n8n-credential-mapping`,
+`n8n-workflow-map`.
 
 Full credit: [../ATTRIBUTION.md](../ATTRIBUTION.md).
 
@@ -82,10 +84,10 @@ Full credit: [../ATTRIBUTION.md](../ATTRIBUTION.md).
 
 **Do not hand-edit a vendored skill.** `./scripts/refresh-skills.sh` replaces
 all fifteen wholesale, so your edit disappears at the next refresh with no
-warning. A change worth keeping goes into one of the ten originals, or upstream
+warning. A change worth keeping goes into one of the eleven originals, or upstream
 as a pull request.
 
-The ten originals are yours to edit. Keep the frontmatter `description`
+The eleven originals are yours to edit. Keep the frontmatter `description`
 specific: it is the entire basis for description-based activation, so a vague
 description means the skill does not fire when it should.
 
