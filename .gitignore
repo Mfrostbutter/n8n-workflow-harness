@@ -27,3 +27,7 @@ node_modules/
 # Offline install artifacts from scripts/vendor-mcp.sh. Large. Commit
 # deliberately only for air-gapped delivery.
 vendor/
+
+# Windows: gen-agent-configs copies .agents/skills/ over the tracked symlinks in
+# .claude/skills/. The copies' contents are never committed; the symlinks are.
+.claude/skills/*/**

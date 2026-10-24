@@ -29,7 +29,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { KIT_DIR, resolveTarget, request, apiAll, fail as libFail } from './lib.mjs';
+import { KIT_DIR, resolveTarget, request, apiAll, fail as libFail, ExitSignal } from './lib.mjs';
 import { PERSONAL, resolveProject, credentialsIndex, credentialProjects, credentialUsers, writeTarget } from './organize.mjs';
 
 const LEDGER_DIR = join(KIT_DIR, 'deploy');
@@ -103,8 +103,13 @@ function infisicalArgs(cfg) {
   return a;
 }
 
+// N8N_INFISICAL_CLI points at the Infisical CLI when it is not `infisical` on PATH;
+// a .js/.cjs/.mjs path runs under this Node (Windows cannot spawn a shebang script).
 function run(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: 60000 });
+  let exe = cmd === 'infisical' && process.env.N8N_INFISICAL_CLI ? process.env.N8N_INFISICAL_CLI : cmd;
+  let argv = args;
+  if (/.[cm]?js$/i.test(exe)) { argv = [exe, ...args]; exe = process.execPath; }
+  const r = spawnSync(exe, argv, { encoding: 'utf8', timeout: 60000 });
   if (r.error) return { status: r.error.code === 'ENOENT' ? 'missing' : 'error', stdout: '', stderr: String(r.error.message) };
   return { status: r.status === 0 ? 'ok' : 'error', stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
 }
@@ -394,14 +399,14 @@ async function main(argv) {
   if (!pos.length) fail(USAGE);
   const [cmd, ...rest] = pos;
   const env = rest[0] ?? envFlag ?? 'dev';
-  if (cmd === 'check') process.exit(await cmdCheck(env));
-  if (cmd === 'sync') process.exit(await cmdSync(env, flags.has('--dry-run'), new Set(only)));
-  if (cmd === 'rotate') { if (!rest.length) fail('usage: secret-map.sh rotate <name>... [--env <env>]'); process.exit(await cmdRotate(envFlag ?? 'dev', rest)); }
-  if (cmd === 'verify') process.exit(await cmdVerify(env));
-  if (cmd === 'ids') process.exit(await cmdIds(env));
+  if (cmd === 'check') { process.exitCode = await cmdCheck(env); return; }
+  if (cmd === 'sync') { process.exitCode = await cmdSync(env, flags.has('--dry-run'), new Set(only)); return; }
+  if (cmd === 'rotate') { if (!rest.length) fail('usage: secret-map.sh rotate <name>... [--env <env>]'); process.exitCode = await cmdRotate(envFlag ?? 'dev', rest); return; }
+  if (cmd === 'verify') { process.exitCode = await cmdVerify(env); return; }
+  if (cmd === 'ids') { process.exitCode = await cmdIds(env); return; }
   fail(`unknown command '${cmd}'\n${USAGE}`);
 }
 
 if (process.argv[1] && /secret-map\.mjs$/.test(process.argv[1])) {
-  main(process.argv.slice(2)).catch((e) => fail(e.message));
+  main(process.argv.slice(2)).catch((e) => { if (!(e instanceof ExitSignal)) fail(e.message); });
 }

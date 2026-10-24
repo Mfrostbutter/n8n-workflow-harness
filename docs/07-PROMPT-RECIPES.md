@@ -119,6 +119,15 @@ worth enforcing.
 **Start a fresh session for a new workflow.** Setup output and a previous
 build's context compete with the current one.
 
+**Keep tool output small.** Measured on n8n-mcp 2.94: a default
+`search_templates` answer is about 115 KB, `get_node` at `full` detail on the
+HTTP Request node about 54 KB, `get_node` at `minimal` under 400 bytes. A
+model with a smaller window than Claude Code's compacts over and over. Say so
+in the prompt: "`get_node` at `minimal`, then `standard` for the node you are
+configuring; `search_templates` with `fields: ["id", "name"]`, then
+`get_template` by id; never read a `workflows/*.json` export whole, use
+`./scripts/wf-diff.sh` or `node-inventory.sh`."
+
 ## Anti-patterns
 
 | Don't | Why |

@@ -2,10 +2,12 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 
 export const KIT_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
 
-/** Loads .env into process.env without overwriting existing values. */
+/** Loads .env into process.env without overwriting existing values. A blank value (`KEY=`) is "not set". */
 export function loadEnv() {
   const f = join(KIT_DIR, '.env');
   if (!existsSync(f)) return;
@@ -14,9 +16,66 @@ export function loadEnv() {
     if (!m) continue;
     let v = m[2].trim().replace(/\s+#.*$/, '');
     if (/^".*"$|^'.*'$/.test(v)) v = v.slice(1, -1);
+    if (v === '') continue;
     if (process.env[m[1]] === undefined) process.env[m[1]] = v;
   }
 }
+
+/** Proxy and CA variables Node's fetch cares about, names and lengths only. */
+export function proxyEnv(env = process.env) {
+  const out = {};
+  for (const k of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy', 'NODE_USE_ENV_PROXY', 'NODE_EXTRA_CA_CERTS', 'NODE_TLS_REJECT_UNAUTHORIZED']) {
+    if (env[k] !== undefined && env[k] !== '') out[k] = env[k].length;
+  }
+  return out;
+}
+
+/** Turns a status-0 error string into the fix to print. */
+export function classifyNetworkError(error = '', env = process.env) {
+  const e = String(error);
+  const proxyVar = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].find((k) => env[k]);
+  if (/CERT|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO|certificate/i.test(e)) {
+    return 'TLS: Node does not trust the certificate the instance (or a TLS-inspecting proxy) presents. Put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem>. Never NODE_TLS_REJECT_UNAUTHORIZED=0.';
+  }
+  if (proxyVar && !env.NODE_USE_ENV_PROXY) {
+    return `${proxyVar} is set but Node's fetch ignores it. Set NODE_USE_ENV_PROXY=1 (Node 22.21+ / 24.5+); NO_PROXY lists hosts that must stay direct.`;
+  }
+  if (proxyVar && /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/.test(e)) {
+    return `the proxy in ${proxyVar} did not answer (${e.match(/E[A-Z_]+/)?.[0] ?? 'no response'}). Check its address, or add this host to NO_PROXY if it should bypass the proxy.`;
+  }
+  if (/ECONNREFUSED/.test(e)) return 'nothing is listening at that address: wrong port, or the instance is down.';
+  if (/ENOTFOUND|EAI_AGAIN/.test(e)) return 'DNS does not resolve the host: VPN, split DNS, or a typo in the URL.';
+  if (/ETIMEDOUT|abort/i.test(e)) return 'no answer within the timeout: firewall, VPN, or a proxy that is required but not configured (HTTPS_PROXY plus NODE_USE_ENV_PROXY=1).';
+  return 'network, DNS, VPN, or the instance is down. Infrastructure, not a workflow.';
+}
+
+/** Loopback or RFC1918 address behind a URL, or null. n8n-mcp's SSRF guard refuses these unless WEBHOOK_SECURITY_MODE=permissive. */
+export async function privateAddress(url) {
+  let host;
+  try { host = new URL(url).hostname.replace(/^\[|\]$/g, ''); } catch { return null; }
+  if (host === 'localhost' || host.endsWith('.localhost')) return host;
+  let addr = host;
+  if (!isIP(host)) {
+    try { addr = (await lookup(host)).address; } catch { return null; }
+  }
+  return isPrivateIp(addr) ? addr : null;
+}
+
+function isPrivateIp(a) {
+  if (a.includes(':')) {
+    if (/^::ffff:/i.test(a)) return isPrivateIp(a.replace(/^::ffff:/i, ''));
+    return a === '::1' || a === '::' || /^f[cd]/i.test(a) || /^fe[89ab]/i.test(a);
+  }
+  const p = a.split('.').map(Number);
+  return p[0] === 10 || p[0] === 127 || p[0] === 0 || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168) || (p[0] === 169 && p[1] === 254);
+}
+
+/** The reason fetch gave up: the cause code first, the generic message as fallback. */
+const fetchError = (e) => {
+  const c = e?.cause;
+  if (c?.code) return `${c.code}: ${c.message ?? e.message}`;
+  return c?.message && c.message !== e.message ? `${e.message} (${c.message})` : e.message;
+};
 
 /** Resolves the URL and key for an environment, falling back to the active pair. */
 export function resolveTarget(env) {
@@ -51,7 +110,7 @@ export async function api(target, path, { timeoutMs = 30000 } = {}) {
     try { body = await res.json(); } catch { /* non-JSON error page */ }
     return { status: res.status, body };
   } catch (e) {
-    return { status: 0, body: null, error: e.message };
+    return { status: 0, body: null, error: fetchError(e) };
   } finally {
     clearTimeout(t);
   }
@@ -72,7 +131,7 @@ export async function request(target, method, path, body, { timeoutMs = 60000 } 
     try { out = await res.json(); } catch { /* empty or non-JSON body */ }
     return { status: res.status, body: out };
   } catch (e) {
-    return { status: 0, body: null, error: e.message };
+    return { status: 0, body: null, error: fetchError(e) };
   } finally {
     clearTimeout(t);
   }
@@ -174,9 +233,29 @@ export function describeDiff(a, b) {
   return out;
 }
 
+/** Thrown by fail(). Unwinds the script; the process then ends on its own with the exit code. */
+export class ExitSignal extends Error {
+  constructor(code) { super(`exit ${code}`); this.code = code; }
+}
+
+let exitHandlersInstalled = false;
+const swallowExit = (e) => {
+  if (e instanceof ExitSignal) return;
+  console.error(e?.stack ?? String(e));
+  process.exitCode = 1;
+};
+
+/** Prints the error and stops the script. Never process.exit(): a socket still closing
+ *  from the last fetch makes exit() fast-fail on Windows (libuv UV_HANDLE_CLOSING). */
 export function fail(msg, code = 2) {
   console.error(`ERROR: ${msg}`);
-  process.exit(code);
+  process.exitCode = code;
+  if (!exitHandlersInstalled) {
+    exitHandlersInstalled = true;
+    process.on('unhandledRejection', swallowExit);
+    process.on('uncaughtException', swallowExit);
+  }
+  throw new ExitSignal(code);
 }
 
 /** Filename-safe slug from a workflow name. */

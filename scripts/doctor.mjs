@@ -5,7 +5,7 @@
 // Usage: node tools/doctor.mjs [env]
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { KIT_DIR, loadEnv, resolveTarget, api } from './lib.mjs';
+import { KIT_DIR, loadEnv, resolveTarget, api, classifyNetworkError, proxyEnv, privateAddress } from './lib.mjs';
 
 const envName = process.argv[2] ?? 'dev';
 let problems = 0;
@@ -37,12 +37,26 @@ async function main() {
   else bad('.env missing', 'cp .env.example .env, then fill it');
 
   const up = envName.toUpperCase();
-  const url = process.env[`N8N_API_URL_${up}`] ?? process.env.N8N_API_URL;
-  const key = process.env[`N8N_API_KEY_${up}`] ?? process.env.N8N_API_KEY;
+  // `||`, not `??`: a template .env leaves N8N_API_URL_DEV= blank, and blank must fall through.
+  const url = process.env[`N8N_API_URL_${up}`] || process.env.N8N_API_URL;
+  const key = process.env[`N8N_API_KEY_${up}`] || process.env.N8N_API_KEY;
   if (url) ok(`URL for "${envName}": ${url}`);
   else bad(`no URL for "${envName}"`, `set N8N_API_URL_${up} or N8N_API_URL`);
   if (key) ok(`API key for "${envName}": present (${key.length} chars)`);
   else bad(`no API key for "${envName}"`, `set N8N_API_KEY_${up} or N8N_API_KEY`);
+
+  // Proxy and CA variables: names and lengths only, never values.
+  const px = proxyEnv();
+  const pxNames = Object.keys(px);
+  if (pxNames.length) ok(`proxy/TLS variables: ${pxNames.map((k) => `${k} (${px[k]} chars)`).join(', ')}`);
+  else ok('no proxy or CA variables set (direct connection)');
+  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
+    bad('NODE_TLS_REJECT_UNAUTHORIZED=0 turns off certificate checks for the whole process', 'remove it; put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem> instead');
+  }
+  const proxyVar = pxNames.find((k) => /^https?_proxy$/i.test(k));
+  if (proxyVar && !process.env.NODE_USE_ENV_PROXY) {
+    note(`${proxyVar} is set but the toolkit's fetch ignores it until NODE_USE_ENV_PROXY=1 (the MCP server follows it on its own)`);
+  }
 
   // A prod key in the active slot is a footgun: every default-target command
   // would hit production.
@@ -58,11 +72,21 @@ async function main() {
   // --- 3. Instance
   console.log('\ninstance');
   const target = resolveTarget(envName);
+
+  // n8n-mcp's SSRF guard runs on the managed server only; the toolkit below never sees it.
+  const mode = process.env.WEBHOOK_SECURITY_MODE || 'permissive';
+  const priv = await privateAddress(url);
+  if (priv && mode !== 'permissive') {
+    bad(`the managed n8n MCP server will refuse ${priv} (WEBHOOK_SECURITY_MODE=${mode} blocks private and loopback addresses)`, 'unset WEBHOOK_SECURITY_MODE or set it to permissive. Every n8n_* tool fails with "SSRF protection" until then; this toolkit is unaffected.');
+  } else {
+    ok(`managed server SSRF mode: ${mode}${process.env.WEBHOOK_SECURITY_MODE ? '' : ' (launcher default)'}${priv ? `, ${priv} is a private address and allowed` : ''}`);
+  }
+
   const probe = await api(target, '/workflows?limit=1', { timeoutMs: 15000 });
   if (probe.status === 200) {
     ok('reachable and authenticated');
   } else if (probe.status === 0) {
-    bad(`unreachable (${probe.error ?? 'no response'})`, 'network, DNS, VPN, or the instance is down. Infrastructure, not a workflow.');
+    bad(`unreachable (${probe.error ?? 'no response'})`, classifyNetworkError(probe.error));
   } else if (probe.status === 401 || probe.status === 403) {
     bad(`API key rejected (${probe.status})`, 'key expired or revoked, or the instance encryption key changed');
   } else if (probe.status === 404) {

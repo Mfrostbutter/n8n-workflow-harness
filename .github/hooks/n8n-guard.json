@@ -4,7 +4,7 @@
     "preToolUse": [
       {
         "type": "command",
-        "bash": "node scripts/guard-pre-tool.mjs",
+        "command": "node scripts/guard-pre-tool.mjs",
         "timeoutSec": 10
       }
     ]

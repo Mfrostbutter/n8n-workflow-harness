@@ -1,18 +1,21 @@
 // Pre-tool guard for every agent that runs hooks: Claude Code, Codex, Cursor,
 // GitHub Copilot, Devin Desktop. One script, payload shape detected at runtime.
 //
-// deny  (exit 2, message on stderr): delete tools and delete commands.
-//       Archive instead: export, commit, deactivate, rename with an ARCHIVED- prefix.
-// ask   (Claude Code and Codex: permissionDecision "ask"; others: deny, since
-//       they cannot ask): deploy or promote to staging or prod, promotion apply,
-//       source-control pull, CLI activate, and any workflow write while
-//       N8N_API_URL equals N8N_API_URL_PROD.
+// deny  delete tools and delete commands. Claude Code, Codex, Devin: exit 2 with
+//       the message on stderr. Copilot: {"permissionDecision":"deny"} on stdout,
+//       exit 0 (a non-zero exit is a plain error there, with no reason shown).
+//       Cursor: {"permission":"deny"}. Archive instead: export, commit,
+//       deactivate, rename with an ARCHIVED- prefix.
+// ask   (Claude Code, Codex, Copilot: permissionDecision "ask"; Cursor and
+//       Devin: deny, since they cannot ask): deploy or promote to staging or
+//       prod, promotion apply, source-control pull, CLI activate, and any
+//       workflow write while N8N_API_URL equals N8N_API_URL_PROD.
 // allow everything else. Fails open on malformed input.
 //
 // Wired from: .claude/settings.json (PreToolUse), .codex/hooks.json,
 // .cursor/hooks.json, .github/hooks/n8n-guard.json, .devin/hooks.json.
-// Shapes checked against each vendor's docs on 2026-10-19; the Claude Code
-// shape is tested end to end, the others follow the documented fields.
+// Shapes checked against each vendor's docs on 2026-10-22; Claude Code and
+// Copilot shapes are tested end to end, the others follow the documented fields.
 import { readFileSync } from 'node:fs';
 
 const ARCHIVE = 'Archive, do not delete: export-all and commit, deactivate, rename with an ARCHIVED- prefix (archive_workflow or n8n_update_partial_workflow). Deletion is a separate decision made later.';
@@ -84,6 +87,10 @@ if (process.argv[1] && /guard-pre-tool\.mjs$/.test(process.argv[1])) {
   try { payload = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
   const parsed = parsePayload(payload);
   const [verdict, msg] = decide(parsed);
+  if (parsed.flavor === 'copilot' && verdict !== 'allow') {
+    process.stdout.write(JSON.stringify({ permissionDecision: verdict, permissionDecisionReason: msg }));
+    process.exit(0);
+  }
   if (verdict === 'deny') {
     process.stderr.write(`BLOCKED by guard-pre-tool: ${msg}\n`);
     process.exit(2);

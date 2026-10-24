@@ -6,14 +6,47 @@ name: n8n checks
 
 on:
   push:
-    paths: ['workflows/**', 'scripts/**', '.github/workflows/n8n-checks.yml']
+    paths: ['workflows/**', 'scripts/**', 'tests/**', '.claude/**', '.github/**', 'setup.*', 'package*.json']
   pull_request:
-    paths: ['workflows/**', 'scripts/**']
+    paths: ['workflows/**', 'scripts/**', 'tests/**', '.claude/**', '.github/**', 'setup.*', 'package*.json']
   schedule:
     - cron: '17 6 * * 1-5'
   workflow_dispatch:
 
 jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # isolated-vm (via @n8n/expression-runtime) needs a prebuilt binary for the Node ABI or a C++
+          # toolchain; the Windows runner has neither for every Node line. 24 has prebuilds.
+          node-version: '24'
+      - run: npm ci --no-fund --no-audit
+      - run: npm test
+      - name: Generated configs and skills (copies on Windows)
+        shell: bash
+        run: |
+          node scripts/gen-agent-configs.mjs
+          node scripts/gen-agent-configs.mjs --check
+          # The copies must never reach the index: every tracked entry stays a symlink, status stays clean.
+          test -z "$(git status --porcelain -- .claude/skills)"
+          test "$(git ls-files -s .claude/skills | grep -vc '^120000')" = 0
+          git add -A --dry-run | grep -q 'skills/' && { echo 'skill copies would be added'; exit 1; } || true
+      - name: Hooks run clean on this platform
+        shell: bash
+        run: |
+          echo '{}' | node .claude/hooks/session-start.mjs | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8")).hookSpecificOutput.additionalContext || process.exit(1)'
+          echo '{"tool_name":"mcp__n8n__n8n_create_workflow","tool_input":{}}' | node .claude/hooks/pre-n8n-write.mjs | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8")).hookSpecificOutput.additionalContext || process.exit(1)'
+      - name: Offline preflight
+        if: runner.os == 'Linux'
+        run: ./scripts/verify-setup.sh --fast
+
   validate:
     runs-on: ubuntu-latest
     steps:

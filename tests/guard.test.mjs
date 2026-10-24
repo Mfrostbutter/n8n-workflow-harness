@@ -78,10 +78,23 @@ test('Cursor shape returns deny JSON instead of ask; Copilot and Devin shapes ex
   const cur = run({ hook_event_name: 'beforeShellExecution', command: './scripts/deploy.sh x.json prod', cwd: '/x' });
   assert.equal(cur.status, 0);
   assert.equal(JSON.parse(cur.stdout).permission, 'deny');
-  const cop = run({ toolName: 'bash', toolArgs: { command: 'n8n-cli promotion-connection apply c1' } });
-  assert.equal(cop.status, 2);
   const dev = run({ tool_info: { tool_name: 'run_command', command: `n8n-cli ${DEL} 1` } });
   assert.equal(dev.status, 2);
+});
+
+test('Copilot shape answers with permissionDecision JSON and exit 0 (a non-zero exit is an error there)', () => {
+  const deny = run({ sessionId: 's', timestamp: 1, cwd: '/x', toolName: ['n8n', 'delete', 'workflow'].join('_'), toolArgs: { id: '1' } });
+  assert.equal(deny.status, 0);
+  assert.equal(deny.stderr, '');
+  const d = JSON.parse(deny.stdout);
+  assert.equal(d.permissionDecision, 'deny');
+  assert.match(d.permissionDecisionReason, /Archive/);
+  const ask = run({ toolName: 'bash', toolArgs: { command: 'n8n-cli promotion-connection apply c1' } });
+  assert.equal(ask.status, 0);
+  assert.equal(JSON.parse(ask.stdout).permissionDecision, 'ask');
+  const allow = run({ toolName: 'n8n_get_workflow', toolArgs: { id: '1' } });
+  assert.equal(allow.status, 0);
+  assert.equal(allow.stdout, '');
 });
 
 test('malformed input exits clean', () => {

@@ -14,7 +14,7 @@
   },
   "scripts": {
     "verify": "./scripts/verify-setup.sh",
-    "test": "node --test tests/tools.test.mjs tests/instance.test.mjs tests/organize.test.mjs tests/secret-map.test.mjs tests/guard.test.mjs",
+    "test": "node --test tests/tools.test.mjs tests/network.test.mjs tests/instance.test.mjs tests/organize.test.mjs tests/secret-map.test.mjs tests/guard.test.mjs",
     "doctor": "node scripts/doctor.mjs",
     "drift": "node scripts/drift-check.mjs",
     "export": "node scripts/export-all.mjs",

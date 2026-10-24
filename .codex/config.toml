@@ -9,7 +9,7 @@ env = { "MCP_MODE" = "stdio", "LOG_LEVEL" = "error", "DISABLE_CONSOLE_OUTPUT" = 
 command = "node"
 args = ["scripts/mcp-server.mjs"]
 env = { "MCP_MODE" = "stdio", "LOG_LEVEL" = "error", "DISABLE_CONSOLE_OUTPUT" = "true", "N8N_MCP_TELEMETRY_DISABLED" = "true" }
-env_vars = ["N8N_API_URL", "N8N_API_KEY", "N8N_CF_CLIENT_ID", "N8N_CF_CLIENT_SECRET"]
+env_vars = ["N8N_API_URL", "N8N_API_KEY", "N8N_CF_CLIENT_ID", "N8N_CF_CLIENT_SECRET", "WEBHOOK_SECURITY_MODE"]
 
 [mcp_servers.n8n_official]
 # url references N8N_API_URL; Codex does not expand variables. Fill the literal URL:

@@ -9,7 +9,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
@@ -83,9 +83,10 @@ before(async () => {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   base = `http://127.0.0.1:${server.address().port}`;
   bin = mkdtempSync(join(tmpdir(), 'fake-bin-'));
-  writeFileSync(join(bin, 'infisical'), FAKE_INFISICAL);
-  chmodSync(join(bin, 'infisical'), 0o755);
-  writeFileSync(join(bin, 'infisical.values'), JSON.stringify(VALUES));
+  // A Node script, named through N8N_INFISICAL_CLI: a shebang file on PATH does not spawn on Windows.
+  writeFileSync(join(bin, 'infisical.cjs'), FAKE_INFISICAL);
+  chmodSync(join(bin, 'infisical.cjs'), 0o755);
+  writeFileSync(join(bin, 'infisical.cjs.values'), JSON.stringify(VALUES));
 });
 
 after(() => {
@@ -108,7 +109,7 @@ const writeMap = (m, env = 'dev') => writeFileSync(join(kit, 'deploy', `secret-m
 const ids = (env = 'dev') => (existsSync(join(kit, 'deploy', `creds.${env}.json`)) ? JSON.parse(readFileSync(join(kit, 'deploy', `creds.${env}.json`), 'utf8')) : null);
 
 async function run(args, extra = {}) {
-  const env = { ...process.env, N8N_API_URL_DEV: base, N8N_API_KEY_DEV: 'test-key', PATH: `${bin}:${process.env.PATH}`, PG_HOST: 'pg.lab.internal', ...extra };
+  const env = { ...process.env, N8N_API_URL_DEV: base, N8N_API_KEY_DEV: 'test-key', PATH: `${bin}${delimiter}${process.env.PATH}`, N8N_INFISICAL_CLI: join(bin, 'infisical.cjs'), PG_HOST: 'pg.lab.internal', ...extra };
   delete env.N8N_API_URL; delete env.N8N_API_KEY;
   for (const k of Object.keys(VALUES)) if (!(k in extra)) delete env[k];
   let r;

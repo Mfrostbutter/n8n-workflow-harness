@@ -8,13 +8,20 @@
 //
 // Usage: node scripts/gen-agent-configs.mjs [--check] [--copy]
 //   --check   exit 1 if any generated file is stale (CI)
-//   --copy    copy skills instead of symlinking (Windows, or policy)
+//   --copy    copy skills instead of symlinking (the default on Windows, or policy)
+//   --link    symlink even on Windows (needs core.symlinks=true and Developer Mode)
+//
+// Windows: a checkout with core.symlinks=false turns the committed symlinks into
+// text files. Copies replace them; the symlink entries are marked skip-worktree
+// (status stays clean) and .gitignore excludes the copies' contents (add -A
+// never stages them). After a pull that changes a skill, run again.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, lstatSync, symlinkSync, rmSync, cpSync, readlinkSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { KIT_DIR } from './lib.mjs';
 
 const CHECK = process.argv.includes('--check');
-const COPY = process.argv.includes('--copy');
+const COPY = process.argv.includes('--copy') || (process.platform === 'win32' && !process.argv.includes('--link'));
 const BANNER = (src) => `<!-- GENERATED from ${src} by scripts/gen-agent-configs.mjs. Edit the source, then regenerate. -->`;
 let stale = 0;
 let wrote = 0;
@@ -112,6 +119,14 @@ if (existsSync(mcpPath)) {
   emit('.codex/config.toml', `${lines.join('\n').trimEnd()}\n`);
 }
 
+/** Hides a copy that replaced a tracked symlink from git status and commits. Fails open outside a checkout. */
+function skipWorktree(rel) {
+  try {
+    const entry = execFileSync('git', ['ls-files', '-s', '--', rel], { cwd: KIT_DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    if (entry.startsWith('120000')) execFileSync('git', ['update-index', '--skip-worktree', '--', rel], { cwd: KIT_DIR, stdio: 'ignore' });
+  } catch { /* not a git checkout, or git missing */ }
+}
+
 // --- 3. skills ---------------------------------------------------------------
 const srcSkills = join(KIT_DIR, '.agents', 'skills');
 if (existsSync(srcSkills)) {
@@ -131,7 +146,7 @@ if (existsSync(srcSkills)) {
     if (ok) continue;
     if (CHECK) { console.error(`  STALE    .claude/skills/${name}`); stale++; continue; }
     rmSync(to, { recursive: true, force: true });
-    if (COPY) cpSync(from, to, { recursive: true });
+    if (COPY) { cpSync(from, to, { recursive: true }); skipWorktree(`.claude/skills/${name}`); }
     else {
       try { symlinkSync(want, to, 'dir'); }
       catch (e) { console.error(`  symlink failed for ${name} (${e.code}); use --copy on this platform`); process.exitCode = 1; continue; }

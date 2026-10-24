@@ -355,7 +355,9 @@ dependencies for an offline `npm ci`. See
 [docs/10-MAINTENANCE.md](docs/10-MAINTENANCE.md).
 
 The `.sh` wrappers need bash; on Windows that means Git Bash. The `.mjs` tools
-run natively under PowerShell, so nothing is bash-only.
+and the hooks run natively under PowerShell, so nothing is bash-only.
+`setup.ps1` handles the one Windows-specific step, the skill symlinks
+([docs/11-EDITORS.md](docs/11-EDITORS.md#windows)).
 
 ## Licence and credit
 

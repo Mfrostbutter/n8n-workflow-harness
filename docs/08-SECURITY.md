@@ -66,6 +66,17 @@ explicit switch to the wrong instance still writes.
 
 A credential written to the wrong instance is a disclosure, not a typo.
 
+**The managed server runs with its SSRF guard in `permissive` mode** so that a
+dev instance on `localhost` or a LAN address is reachable
+([03-MCP-SERVERS.md](03-MCP-SERVERS.md#n8n-needs-credentials)). The server
+only ever talks to the URL you configured plus the webhook URLs you ask
+`n8n_test_workflow` to call; the guard does not add a boundary the API key
+does not already draw. Set `WEBHOOK_SECURITY_MODE=strict` if your policy
+wants it back for a public instance.
+
+**Corporate TLS inspection** is handled with `NODE_EXTRA_CA_CERTS`, never with
+`NODE_TLS_REJECT_UNAUTHORIZED=0`; `doctor` fails on the latter.
+
 **Archive, do not delete.** Export, commit, deactivate, then remove. Especially
 anything you did not create.
 

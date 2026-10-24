@@ -26,8 +26,9 @@ credentials.
 ## Non-negotiables
 
 1. **Load the skill before the action, not after it fails.** Twenty-five
-   skills live in `.agents/skills/` (Claude Code reads them through links in
-   `.claude/skills/`). `using-n8n-mcp-skills` is the router. Invoke the matching
+   skills live in `.agents/skills/` (Claude Code reads them through
+   `.claude/skills/`: links, or copies on Windows). `using-n8n-mcp-skills` is
+   the router. Invoke the matching
    skill before writing an expression, configuring a node, designing a flow,
    writing Code node logic, or promoting anything.
 
@@ -77,6 +78,16 @@ credentials.
     get_workflow and read connections → organize place → execute →
     verify the execution → lint-workflow → promote through the agreed path →
     verify again on the target
+
+## Context budget
+
+Tool answers are large and the window is finite. `get_node` at `minimal`
+first, `standard` for the node being configured, `full` for one node at a
+time and only when a property is missing. `search_templates` with
+`fields: ["id", "name"]`, then `get_template` by id. Never read a
+`workflows/*.json` export whole; `wf-diff`, `node-inventory` and `lint-workflow`
+answer the questions that reading would. `tools_documentation` once per
+session.
 
 ## Toolkit
 

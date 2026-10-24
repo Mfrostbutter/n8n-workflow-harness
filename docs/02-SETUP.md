@@ -8,7 +8,7 @@ The full path, with the reasoning. For the fast version see
 
 | Need | Why | Check |
 |---|---|---|
-| Node 20+ and npm | The n8n-mcp servers, the CLI and the whole toolkit | `node --version` |
+| Node 20+ and npm (24 recommended, required on Windows without build tools) | The n8n-mcp servers, the CLI and the whole toolkit. `isolated-vm` (via `@n8n/expression-runtime`) ships prebuilt binaries for Node 24; on older lines `npm ci` compiles it and needs a C++ toolchain | `node --version` |
 | Git | Rollback. Without it there is no undo | `git --version` |
 | Claude Code | The harness itself | `claude --version` |
 | n8n instance, public API on | Anything that touches a workflow | Settings → n8n API |
@@ -27,12 +27,15 @@ cd n8n-workflow-harness
 ./setup.sh
 ```
 
-Windows: `.\setup.ps1 -DryRun`, then `.\setup.ps1`.
+Windows: `.\setup.ps1 -DryRun`, then `.\setup.ps1`. It does the same work
+natively, and additionally replaces the committed skill symlinks (which a
+default Windows checkout turns into text files) with copies that git ignores.
+Details and the `core.symlinks` alternative: [11-EDITORS.md](11-EDITORS.md#windows).
 
-It sets execute bits on `scripts/` and `.claude/hooks/`, **installs the pinned
-`n8n-mcp` via `npm ci`**, copies `.env.example` to `.env` if absent, runs
-`git init` if this is not already a repo, and ends with
-`./scripts/verify-setup.sh`.
+It sets execute bits on `scripts/`, **installs the pinned `n8n-mcp` via
+`npm ci`**, copies `.env.example` to `.env` if absent, runs `git init` if this
+is not already a repo, generates the per-editor configs and skill links, and
+ends with `./scripts/verify-setup.sh`.
 
 The n8n-mcp install is the slow part (~100 MB, because it carries the node
 database that makes validation accurate). If `vendor/npm-cache` exists it
@@ -93,6 +96,27 @@ error does not say why. This is the most common setup failure.
 Claude Code prompts to approve project MCP servers on first use. Approve both.
 `/mcp` shows their status and tool counts.
 
+### Behind a corporate proxy
+
+Export these alongside `.env` before launching, in every editor:
+
+```bash
+export NODE_USE_ENV_PROXY=1                      # Node's fetch follows HTTPS_PROXY / NO_PROXY
+export NODE_EXTRA_CA_CERTS=/path/to/corp-ca.pem    # CA bundle if TLS is inspected
+```
+
+The MCP server follows the proxy variables on its own; the toolkit needs the
+first line, and both need the second when the instance certificate is
+re-signed on the way. Not `NODE_TLS_REJECT_UNAUTHORIZED=0`. The full picture
+is in [09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#behind-a-corporate-proxy-or-tls-inspection).
+
+### Private instance addresses
+
+A dev instance on `localhost` or a LAN address is the normal case, and n8n-mcp
+would refuse it in its default SSRF mode. `scripts/mcp-server.mjs` runs the
+managed server with `WEBHOOK_SECURITY_MODE=permissive` unless you set the
+variable yourself; `doctor` tells you which mode is in force.
+
 ## 4. Verify offline
 
 ```bash
@@ -120,9 +144,12 @@ npm run smoke        # expect 7 tools with no credentials
 ./scripts/doctor.sh
 ```
 
-Reports environment, whether the URL resolves and the key is accepted, whether
-the public API is enabled, the n8n version, whether `workflows/` has exports
-yet, and repo state. It warns if the active target equals `N8N_API_URL_PROD`.
+Reports environment (including which proxy and CA variables are set, names
+only), the SSRF mode the managed server will run in, whether the URL resolves
+and the key is accepted, whether the public API is enabled, whether
+`workflows/` has exports yet, and repo state. It warns if the active target
+equals `N8N_API_URL_PROD`. An unreachable instance is reported with the
+underlying error code and the matching fix.
 
 Then confirm the MCP surface from inside Claude Code:
 

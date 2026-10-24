@@ -83,9 +83,16 @@ Read the `connections` object after every write. This is step 5 of
 Symptoms: invented `typeVersion`s, no `get_node` call before configuring, an
 expression reading `$json` for webhook data.
 
-- Check they are present: `ls .agents/skills` should show 23, `ls .claude/skills`
+- Check they are present: `ls .agents/skills` should show 25, `ls .claude/skills`
   the same (links; `npm run gen:agents` recreates them), and
   `./scripts/verify-setup.sh` confirms each has a `SKILL.md`.
+- Windows: if `.claude\skills\n8n-agents` is a 31-byte text file instead of a
+  directory, git checked the symlinks out as text (`core.symlinks=false`, the
+  default) and Claude Code sees no skills at all. `setup.ps1` runs
+  `node scripts\gen-agent-configs.mjs --copy`, which replaces the stubs with
+  copies and marks them `skip-worktree` so they never show up in `git status`.
+  Run it again after a pull that changes a skill. See
+  [11-EDITORS.md](11-EDITORS.md#windows).
 - Claude Code must be running **in this directory**. Project skills do not load
   from elsewhere. Alternatively `./setup.sh --global-skills`.
 - Ask explicitly: "Load `using-n8n-mcp-skills` and tell me which skill owns
@@ -97,21 +104,85 @@ expression reading `$json` for webhook data.
 Hooks fail open on purpose, so a broken hook is silent. Test them directly:
 
 ```bash
-echo '{}' | ./.claude/hooks/session-start.sh
-echo '{"tool_name":"mcp__n8n__n8n_create_workflow","tool_input":{}}' | ./.claude/hooks/pre-n8n-write.sh
+echo '{}' | node .claude/hooks/session-start.mjs
+echo '{"tool_name":"mcp__n8n__n8n_create_workflow","tool_input":{}}' | node .claude/hooks/pre-n8n-write.mjs
 ```
 
-Each should print JSON and exit 0. Nothing printed means Node is missing or a
-path is wrong.
+Each should print JSON and exit 0 on every platform; the hooks are Node, not
+bash. Nothing printed means Node is missing or a path is wrong.
 
 If they work standalone but not in session:
 
 - `.claude/settings.json` must be valid JSON. **A malformed settings file
   silently disables every setting in it**, permissions included. Check with
   `node -e 'JSON.parse(require("fs").readFileSync(".claude/settings.json","utf8"))'`.
-- Not executable: `chmod +x .claude/hooks/*.sh`.
+- The hook commands are repo-relative (`node .claude/hooks/session-start.mjs`)
+  and run with the project as the working directory. Do not reintroduce
+  `$CLAUDE_PROJECT_DIR`: only Claude Code sets it, and VS Code loads this file
+  too (see [11-EDITORS.md](11-EDITORS.md#vs-code-with-github-copilot)).
 - Claude Code only watches directories that had a settings file at session
   start. Open `/hooks` once to reload, or restart.
+
+## `n8n_*` tools answer `SSRF protection: Private IP addresses not allowed`
+
+The managed `n8n` server (n8n-mcp) resolves `N8N_API_URL` before every call
+and, in its default `strict` mode, refuses loopback and RFC1918 addresses. An
+on-prem dev instance is exactly that, and the error arrives as a normal tool
+result, so the agent sees "failed" with no cause while `doctor` and
+`drift-check` (which do not run that check) say the instance is fine.
+
+`scripts/mcp-server.mjs` sets `WEBHOOK_SECURITY_MODE=permissive` unless the
+environment already has a value, and `.mcp.json` passes the variable through.
+If you see this error anyway, something set the variable to `strict` or
+`moderate` (`moderate` still blocks private IPs), or the server is not being
+launched through `scripts/mcp-server.mjs`. `doctor` prints the mode in force
+and fails when it would block the configured URL.
+
+## Behind a corporate proxy or TLS inspection
+
+Two different HTTP stacks are in play. The MCP server uses axios, which follows
+`HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` on its own. The toolkit
+(`doctor`, `drift-check`, `export-all`, ...) uses Node's built-in `fetch`,
+which ignores those variables until `NODE_USE_ENV_PROXY=1` is set
+(Node 22.21+ / 24.5+). So one half can work while the other reports
+"unreachable".
+
+TLS inspection replaces the instance certificate with one signed by the
+corporate CA. Node does not trust it, the request fails with
+`DEPTH_ZERO_SELF_SIGNED_CERT` or `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, and both
+stacks are affected.
+
+```bash
+export NODE_USE_ENV_PROXY=1                    # fetch honours HTTPS_PROXY / NO_PROXY
+export NODE_EXTRA_CA_CERTS=/path/to/corp-ca.pem  # the CA bundle, PEM, from your IT team
+```
+
+PowerShell: `$env:NODE_USE_ENV_PROXY='1'; $env:NODE_EXTRA_CA_CERTS='C:\path\corp-ca.pem'`.
+
+Never `NODE_TLS_REJECT_UNAUTHORIZED=0`. It disables certificate checks for the
+whole process, Node prints a warning, and `doctor` fails on it.
+
+`doctor` reports which proxy and CA variables are set (names and lengths
+only), notes a proxy variable that `fetch` is ignoring, and on an unreachable
+instance prints the underlying code (`ECONNREFUSED`, `ENOTFOUND`,
+`DEPTH_ZERO_SELF_SIGNED_CERT`) with the matching fix instead of a bare
+`fetch failed`.
+
+## `npm ci` fails on `isolated-vm` (`node-gyp`, "could not find a version of Visual Studio")
+
+`isolated-vm`, a native module pulled in through `@n8n/expression-runtime`, ships prebuilt
+binaries for Node 24 (`darwin-arm64`, `linux-x64`, `linux-arm64`,
+`win32-x64`). On Node 20 or 22 npm compiles it instead, which on Windows
+needs Visual Studio Build Tools with the C++ workload and Python, and on
+macOS or Linux a C++ toolchain. Install Node 24 and run `npm ci` again; the
+install then takes seconds. CI runs the suite on Node 24 for the same reason.
+
+## Windows
+
+Git for Windows, Node 24, PowerShell: `.\setup.ps1`. The `.mjs` tools and the
+hooks run natively; only the `.sh` wrappers need Git Bash. The two things that
+differ from macOS and Linux are the skill symlinks (above) and the proxy
+variables (above). The full list is in [11-EDITORS.md](11-EDITORS.md#windows).
 
 ## `Settings → n8n API` is missing
 
