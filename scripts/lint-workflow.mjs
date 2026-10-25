@@ -3,7 +3,8 @@
 // environment without someone editing it by hand".
 //
 // Usage: node scripts/lint-workflow.mjs <file.json | dir> [...] [--strict] [--json]
-//        [--require-tags] [--require-error-workflow] [--allow-host <host>]...
+//        [--require-tags] [--require-error-workflow] [--require-placement]
+//        [--require-code-comment] [--allow-host <host>]...
 //
 // Exit 1 on any error. --strict promotes warnings to errors. --json prints one
 // report object per file for CI. Prints a promotion manifest per file: the
@@ -32,6 +33,7 @@ const JSON_OUT = flag('--json');
 const REQUIRE_TAGS = flag('--require-tags');
 const REQUIRE_ERROR_WF = flag('--require-error-workflow');
 const REQUIRE_PLACEMENT = flag('--require-placement');
+const REQUIRE_CODE_COMMENT = flag('--require-code-comment');
 
 // Hosts that only resolve in one environment. A literal one in a parameter
 // breaks on promotion; it belongs in a variable ($vars) or a credential.
@@ -71,6 +73,16 @@ function lint(file) {
   // --- placement: project and folder, applied by organize.mjs after the create
   if (!String(wf.project ?? '').trim()) (REQUIRE_PLACEMENT ? err : warn)('no "project": add "project": "<team project>" or "personal" (every workflow is placed)');
   if (!String(wf.folder ?? '').trim()) (REQUIRE_PLACEMENT ? err : warn)('no "folder": add "folder": "<name or path>"; the project root is not organized');
+
+  // --- code comment: every Code node opens with a comment that says what it does
+  if (REQUIRE_CODE_COMMENT) {
+    for (const n of nodes) {
+      if (n?.type !== 'n8n-nodes-base.code') continue;
+      const code = String(n.parameters?.jsCode ?? n.parameters?.pythonCode ?? '');
+      const first = code.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+      if (!/^(\/\/|\/\*|#)/.test(first)) err(`Code node "${n.name ?? '?'}": code does not start with a comment (--require-code-comment)`);
+    }
+  }
 
   // --- error workflow: unattended failures must go somewhere
   if (!wf.settings?.errorWorkflow) {

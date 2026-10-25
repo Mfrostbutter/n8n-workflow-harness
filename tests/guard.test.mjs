@@ -110,3 +110,111 @@ test('asks before a forced credential transfer, allows the plain one', () => {
   assert.equal(plain.status, 0);
   assert.equal(plain.stdout, '');
 });
+
+test('Copilot names MCP tools <server>-<tool>: deny on delete, deny on delete actions, ask on pull', () => {
+  const cp = (toolName, toolArgs) => ({ sessionId: 's', timestamp: 1, cwd: '/x', toolName, toolArgs });
+  const del = run(cp('n8n-n8n_delete_workflow', { id: '1' }));
+  assert.equal(del.status, 0);
+  assert.equal(JSON.parse(del.stdout).permissionDecision, 'deny');
+  assert.match(JSON.parse(del.stdout).permissionDecisionReason, /Archive, do not delete/);
+  const folder = run(cp('n8n-n8n_manage_folders', { action: 'delete', folderId: 'f' }));
+  assert.equal(JSON.parse(folder.stdout).permissionDecision, 'deny');
+  const pull = run(cp('powershell', { command: 'npx n8n-cli source-control pull', description: 'pull', initial_wait: 120 }));
+  assert.equal(JSON.parse(pull.stdout).permissionDecision, 'ask');
+  assert.match(JSON.parse(pull.stdout).permissionDecisionReason, /overwrites local workflows/);
+  const read = run(cp('n8n-n8n_get_workflow', { id: '1' }));
+  assert.equal(read.status, 0);
+  assert.equal(read.stdout, '');
+});
+
+test('Copilot preMcpToolCall shape (bare tool name, serverName, arguments) is denied on delete', () => {
+  const r = run({ toolCallId: 'n8n-n8n_delete_workflow:23', serverName: 'n8n', toolName: 'n8n_delete_workflow', arguments: { id: 'q' }, sessionId: 's', timestamp: 1, cwd: '/x' });
+  assert.equal(r.status, 0);
+  assert.equal(JSON.parse(r.stdout).permissionDecision, 'deny');
+  const act = run({ toolCallId: 'x', serverName: 'n8n', toolName: 'n8n_manage_credentials', arguments: { action: 'delete', id: 'c' }, sessionId: 's', timestamp: 1, cwd: '/x' });
+  assert.equal(JSON.parse(act.stdout).permissionDecision, 'deny');
+});
+
+test('Copilot SDK batched toolCalls: strictest verdict across the batch', () => {
+  const r = run({ sessionId: 's', cwd: '/x', toolCalls: [
+    { id: 'view:1', name: 'view', args: { path: '/x/AGENTS.md' } },
+    { id: 'n8n-n8n_delete_workflow:2', name: 'n8n-n8n_delete_workflow', args: { id: 'q' } },
+  ] });
+  assert.equal(r.status, 0);
+  assert.equal(JSON.parse(r.stdout).permissionDecision, 'deny');
+  const ok = run({ sessionId: 's', cwd: '/x', toolCalls: [{ id: 'view:1', name: 'view', args: { path: '/x/AGENTS.md' } }] });
+  assert.equal(ok.stdout, '');
+});
+
+// Skill gate. Each test uses its own session id so the per-session state file starts empty.
+const sid = () => `guard-test-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const CODE_WF = { name: 'x', nodes: [{ name: 'Code', type: 'n8n-nodes-base.code', typeVersion: 2, parameters: { jsCode: 'return $input.all();' } }], connections: {} };
+const PY_WF = { name: 'x', nodes: [{ name: 'Code', type: 'n8n-nodes-base.code', typeVersion: 2, parameters: { language: 'python', pythonCode: 'return _input.all()' } }], connections: {} };
+const TOOL_WF = { name: 'x', nodes: [{ name: 'T', type: '@n8n/n8n-nodes-langchain.toolCode', typeVersion: 1, parameters: { jsCode: 'return "x"' } }], connections: {} };
+const PLAIN_WF = { name: 'x', nodes: [{ name: 'Set', type: 'n8n-nodes-base.set', typeVersion: 3.5, parameters: {} }], connections: {} };
+const cl = (session, tool, input) => ({ session_id: session, cwd: '/x', transcript_path: '/t', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: input });
+const cp = (session, toolName, toolArgs) => ({ sessionId: session, timestamp: 1, cwd: '/x', toolName, toolArgs });
+
+test('skill gate (Claude shape): a Code-node write is denied until the skill was loaded; plain writes pass', () => {
+  const s = sid();
+  const plain = run(cl(s, 'mcp__n8n__n8n_create_workflow', PLAIN_WF));
+  assert.equal(plain.status, 0, plain.stderr);
+  const first = run(cl(s, 'mcp__n8n__n8n_create_workflow', CODE_WF));
+  assert.equal(first.status, 2);
+  assert.match(first.stderr, /Load the n8n-code-javascript skill first/);
+  const load = run(cl(s, 'Skill', { skill: 'n8n-code-javascript' }));
+  assert.equal(load.status, 0);
+  const second = run(cl(s, 'mcp__n8n__n8n_create_workflow', CODE_WF));
+  assert.equal(second.status, 0, second.stderr);
+  const partial = run(cl(s, 'mcp__n8n__n8n_update_partial_workflow', { id: '1', operations: [{ type: 'updateNode', nodeName: 'Code', updates: { parameters: { jsCode: '// x\nreturn []' } } }] }));
+  assert.equal(partial.status, 0, partial.stderr);
+});
+
+test('skill gate: reading the SKILL.md counts as a load; Python and Code Tool map to their own skills', () => {
+  const s = sid();
+  const py = run(cl(s, 'mcp__n8n__n8n_create_workflow', PY_WF));
+  assert.equal(py.status, 2);
+  assert.match(py.stderr, /n8n-code-python/);
+  assert.doesNotMatch(py.stderr, /n8n-code-javascript/);
+  run(cl(s, 'Read', { file_path: 'M:\\repo\\.agents\\skills\\n8n-code-python\\SKILL.md' }));
+  assert.equal(run(cl(s, 'mcp__n8n__n8n_create_workflow', PY_WF)).status, 0);
+  const tool = run(cl(s, 'mcp__n8n__n8n_create_workflow', TOOL_WF));
+  assert.equal(tool.status, 2);
+  assert.match(tool.stderr, /n8n-code-tool/);
+  run(cl(s, 'Read', { file_path: '/repo/.claude/skills/n8n-code-tool/SKILL.md' }));
+  assert.equal(run(cl(s, 'mcp__n8n__n8n_create_workflow', TOOL_WF)).status, 0);
+});
+
+test('skill gate (Copilot shape): deny JSON names the skill, the skill tool unlocks it, reads via view count', () => {
+  const s = sid();
+  const first = run(cp(s, 'n8n-n8n_create_workflow', CODE_WF));
+  assert.equal(first.status, 0);
+  assert.equal(JSON.parse(first.stdout).permissionDecision, 'deny');
+  assert.match(JSON.parse(first.stdout).permissionDecisionReason, /n8n-code-javascript/);
+  run(cp(s, 'skill', { skill: 'n8n-code-javascript' }));
+  assert.equal(run(cp(s, 'n8n-n8n_create_workflow', CODE_WF)).stdout, '');
+  const s2 = sid();
+  run(cp(s2, 'view', { path: 'm:\\Code\\repo\\.agents\\skills\\n8n-code-javascript\\SKILL.md' }));
+  assert.equal(run(cp(s2, 'n8n-n8n_update_full_workflow', { id: '1', ...CODE_WF })).stdout, '');
+});
+
+test('skill gate is off for hooks that cannot see skill loads, without a session id, and with N8N_GUARD_SKILL_GATE=0', () => {
+  const cursor = run({ hook_event_name: 'beforeMCPExecution', tool_name: 'n8n_create_workflow', tool_input: CODE_WF });
+  assert.equal(cursor.status, 0);
+  assert.equal(cursor.stdout, '');
+  const noSession = run({ cwd: '/x', hook_event_name: 'PreToolUse', tool_name: 'mcp__n8n__n8n_create_workflow', tool_input: CODE_WF });
+  assert.equal(noSession.status, 0);
+  const off = run(cl(sid(), 'mcp__n8n__n8n_create_workflow', CODE_WF), { N8N_GUARD_SKILL_GATE: '0' });
+  assert.equal(off.status, 0);
+});
+
+test('session-start hook answers Copilot with top-level additionalContext and Claude Code with the envelope', () => {
+  const HOOK = join(dirname(GUARD), '..', '.claude', 'hooks', 'session-start.mjs');
+  const cpOut = spawnSync(process.execPath, [HOOK], { input: JSON.stringify({ sessionId: 's', source: 'new', cwd: '/x', timestamp: 1 }), encoding: 'utf8' });
+  const cpJson = JSON.parse(cpOut.stdout);
+  assert.ok(cpJson.additionalContext && !cpJson.hookSpecificOutput);
+  const clOut = spawnSync(process.execPath, [HOOK], { input: JSON.stringify({ session_id: 's', source: 'startup', hook_event_name: 'SessionStart' }), encoding: 'utf8' });
+  assert.ok(JSON.parse(clOut.stdout).hookSpecificOutput.additionalContext);
+  const empty = spawnSync(process.execPath, [HOOK], { input: '{}', encoding: 'utf8' });
+  assert.ok(JSON.parse(empty.stdout).hookSpecificOutput.additionalContext);
+});

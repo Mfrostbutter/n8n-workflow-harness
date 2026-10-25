@@ -183,10 +183,20 @@ command line. The rule and the API detail: the `n8n-credential-mapping` skill.
 ```
 
 From `AGENTS.md`: `CLAUDE.md` (only if absent) and `.aiassistant/rules/`.
-From `.mcp.json`: `.vscode/mcp.json`, `.cursor/mcp.json`, `.codex/config.toml`.
+From `.mcp.json` (plus `.mcp.official.json`): `.cursor/mcp.json`, `.codex/config.toml`. VS Code and Claude Code read `.mcp.json` directly.
 From `.agents/skills/`: links in `.claude/skills/` (`--copy` on Windows).
 
 ## `guard-pre-tool` — the hook every editor runs
+
+Besides deny and ask, the guard keeps a **skill gate**: it records every
+skill load in the session (the Skill tool, or a read of a `SKILL.md`) in a
+small file under the OS temp dir keyed by session id, and refuses a workflow
+write that carries a Code node, a Code Tool or an AI Agent until the owning
+skill (`n8n-code-javascript`, `n8n-code-python`, `n8n-code-tool`,
+`n8n-agents`) was loaded. The refusal names the skill; the agent loads it and
+retries. Claude Code, Codex and Copilot hooks see skill loads, so the gate is
+on there; Cursor and Devin hooks see MCP calls only, so it is off there.
+`N8N_GUARD_SKILL_GATE=0` turns it off everywhere.
 
 Not called by hand. Reads the hook payload on stdin, detects the vendor shape,
 and exits 2 with the reason on a delete tool or delete command, or asks (Claude

@@ -177,6 +177,57 @@ needs Visual Studio Build Tools with the C++ workload and Python, and on
 macOS or Linux a C++ toolchain. Install Node 24 and run `npm ci` again; the
 install then takes seconds. CI runs the suite on Node 24 for the same reason.
 
+## The agent ignored a rule in a skill
+
+A skill is advice the model chose to read, or did not. Two deterministic
+answers, both in the harness:
+
+- The guard's skill gate refuses a workflow write that carries a Code, Code
+  Tool or AI Agent node until the owning skill was loaded in the session
+  (`Load the n8n-code-javascript skill first ...`). On Claude Code, Codex and
+  Copilot that turns "should have read it" into "cannot write without it".
+- A rule you need every time belongs in the lint, not only in the skill.
+  `lint-workflow --require-code-comment` fails any Code node whose code does
+  not open with a comment; add your own checks next to it. Promotion already
+  runs the lint, so a convention written there holds regardless of which
+  model or editor built the workflow.
+
+Reported as issue #6 (Copilot on Windows wrote a Code node without the
+comment header the team had added to `n8n-code-javascript`).
+
+## VS Code with Copilot
+
+Checked on VS Code 1.143 with Copilot Chat 0.71 (2026-10-25). Four things look
+like harness failures and are not.
+
+- **Every MCP server shows Error before you have sent a message.** The
+  session runtime that starts servers does not exist yet; the detail reads
+  "Cannot start an MCP server before the session runtime has been created.
+  Send a message first." Send `hello`, then start or use the servers.
+- **`Request session.mcp.listConfigured failed ... Invalid url`** on the
+  first message. Copilot validates every `url` in `.mcp.json` as written, no
+  variable expansion, and one bad entry disables every server. That is why
+  `n8n-official` lives in `.mcp.official.json` and is added by hand
+  ([03-MCP-SERVERS.md](03-MCP-SERVERS.md#registering-n8n-official)). If you
+  see this, something put a `${...}` URL back into `.mcp.json`.
+- **"Not supported by Copilot: Input and command variables are not supported
+  by the Copilot harness."** `${input:...}` prompts are refused, which is why
+  the harness no longer ships a `.vscode/mcp.json`. VS Code reads `.mcp.json`
+  and expands `${VAR}` from its environment, so launch it from a shell that
+  has `.env` exported (the Windows snippet in [11-EDITORS.md](11-EDITORS.md#windows)
+  ends with `code .`). A clone from before 2026-10-25 may still carry a
+  `.vscode/mcp.json`; delete it, or VS Code loads every server twice.
+- **"The model only supports 128 tools, N tools were not provided."** The
+  same servers are loaded twice (an old `.vscode/mcp.json` next to
+  `.mcp.json`), or too many servers are on. Disable the duplicates under
+  Extensions → MCP Servers (gear → Disable (Workspace)), or trim the tool
+  picker in the chat input.
+
+If a delete went through in Copilot, check which guard copy ran: Copilot
+names MCP tools `<server>-<tool>` (`n8n-n8n_delete_workflow`) and the guard
+before 2026-10-25 only matched `__` separators. `npm test` covers the current
+shapes; `tests/guard.test.mjs` is the reference.
+
 ## Windows
 
 Git for Windows, Node 24, PowerShell: `.\setup.ps1`. The `.mjs` tools and the

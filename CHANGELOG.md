@@ -1,5 +1,55 @@
 # Changelog
 
+## 2026-10-25
+
+VS Code + Copilot, verified by hand on Windows (VS Code 1.143.1, Copilot Chat
+0.71.0) against the 2026-10-22 release. Four more defects, all in the Copilot
+path.
+
+- **The guard let a delete through.** Copilot names MCP tools
+  `<server>-<tool>` (`n8n-n8n_delete_workflow`); the guard only matched `__`
+  separators, fell open, and a workflow was deleted. The deny and ask
+  patterns accept `-`, the `preMcpToolCall` shape (`serverName`, bare
+  `toolName`, `arguments`) is parsed, a batched `toolCalls` list is decided
+  strictest-wins, and `.github/hooks/n8n-guard.json` registers
+  `preMcpToolCall` as well. Verified live: the forced call comes back as
+  `Denied by preToolUse hook: Archive, do not delete ...`. Three new tests.
+- **No MCP server could start in VS Code.** Copilot refuses the
+  `${input:...}` prompts the generated `.vscode/mcp.json` relied on ("Input
+  and command variables are not supported by the Copilot harness"), and VS
+  Code now reads `.mcp.json` itself, so it loaded every server twice and
+  dropped tools past the model's 128-tool limit. `.vscode/mcp.json` is gone;
+  `.mcp.json` uses plain `${VAR}`, which Claude Code and VS Code both expand
+  from the environment. Launch VS Code from the shell that exported `.env`.
+- **`n8n-official` disabled every Copilot server.** Copilot validates each
+  `url` as written and `${N8N_API_URL}/mcp-server/http` fails that check for
+  the whole file (`session.mcp.listConfigured failed: Invalid url`). The
+  server moved to `.mcp.official.json`: merged into the Cursor and Codex
+  outputs by the generator, added by hand in Claude Code (`claude mcp add`)
+  and VS Code (MCP: Add Server). The preflight fails on a variable-built url
+  in `.mcp.json` and on a leftover `.vscode/mcp.json`.
+- **Unset `${VAR}`.** Claude Code passes the placeholder through literally
+  when the variable is unset. `scripts/mcp-server.mjs` scrubs such values
+  (`scrubPlaceholders` in `lib.mjs`) so docs mode still works.
+- **Skill gate (issue #6).** A Copilot build on Windows ignored a rule the
+  team had added to `n8n-code-javascript`; the model never loaded the skill.
+  The guard now records skill loads per session (Skill tool, or a read of a
+  `SKILL.md`) and refuses a workflow write carrying a Code, Code Tool or AI
+  Agent node until the owning skill was loaded, naming it. On where the hook
+  sees skill loads (Claude Code, Codex, Copilot); `N8N_GUARD_SKILL_GATE=0`
+  turns it off. The Claude Code guard matcher widened to every tool so the
+  loads reach it. `lint-workflow --require-code-comment` makes the reporter's
+  convention checkable at promotion. Copilot also gets the session-start
+  contract injection (`sessionStart` in `n8n-guard.json`).
+- Smaller: the "Start a build" recipe asks `get_node` at `standard` detail
+  (`minimal` carries no `typeVersion`); AGENTS.md rule 6 says the API key never
+  goes into a shell command the agent composes itself (observed: Copilot tried
+  to `Invoke-RestMethod` with it after a tag call failed); 09-TROUBLESHOOTING
+  gains a Copilot section (servers show Error until the first message; the
+  128-tool warning; the invalid-url failure); 11-EDITORS describes the
+  verified path and that the Claude Code hooks VS Code offers to enable fire
+  for shell commands only.
+
 ## 2026-10-22
 
 Windows, VS Code + Copilot, corporate proxies. Everything reproduced on a

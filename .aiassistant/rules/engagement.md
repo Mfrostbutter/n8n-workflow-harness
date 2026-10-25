@@ -14,8 +14,11 @@ Codex, Cursor, GitHub Copilot, Devin Desktop, JetBrains Junie, Gemini CLI.
 A build and promotion harness. Workflow JSON under `workflows/<env>/` is the
 source of truth; the n8n canvas is a view of it.
 
-Three MCP servers, declared in `.mcp.json` (the source; `.vscode/mcp.json`,
-`.cursor/mcp.json` and `.codex/config.toml` are generated from it):
+Three MCP servers. `.mcp.json` declares `n8n-docs` and `n8n` (the source;
+`.cursor/mcp.json` and `.codex/config.toml` are generated from it) and
+`.mcp.official.json` declares `n8n-official`, registered per editor as
+`docs/03-MCP-SERVERS.md` describes, because its URL is built from a variable
+and not every client expands one:
 
 | Server | What runs | Reaches an instance | Use for |
 |---|---|---|---|
@@ -35,7 +38,11 @@ credentials.
    `.claude/skills/`: links, or copies on Windows). `using-n8n-mcp-skills` is
    the router. Invoke the matching
    skill before writing an expression, configuring a node, designing a flow,
-   writing Code node logic, or promoting anything.
+   writing Code node logic, or promoting anything. The guard enforces the
+   Code-node part: a workflow write that carries a Code, Code Tool or AI
+   Agent node is refused until `n8n-code-javascript`, `n8n-code-python`,
+   `n8n-code-tool` or `n8n-agents` was loaded in this session. Load it,
+   then retry the same call.
 
 2. **Configure from the live schema, never from memory.** n8n's surface drifts
    between versions. Call `get_node` before setting parameters. If a skill
@@ -62,6 +69,11 @@ credentials.
    creates them on the target and `verify` finds the ones that trace to
    nothing (`n8n-credential-mapping`).
 
+   The instance API key stays in the environment and reaches the instance only
+   through the `n8n` MCP server or the toolkit scripts. Never paste it into a
+   shell command, an HTTP call you compose yourself, or a workflow parameter;
+   if a tool call fails, say so and stop rather than working around it with
+   the raw key.
 7. **Export before you change, and check drift before you trust the repo.**
    `./scripts/export-all.sh` plus a commit is the rollback point, and it is
    only valid if `./scripts/drift-check.sh` was clean when you took it.

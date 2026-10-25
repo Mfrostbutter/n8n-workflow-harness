@@ -12,11 +12,16 @@ varies is how much of the guidance and enforcement layer each one picks up.
 | Toolkit (`doctor`, `drift-check`, `lint-workflow`, …) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Contract auto-loaded | `CLAUDE.md` (`@AGENTS.md`) | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md`, `.aiassistant/rules/` |
 | 25 skills discovered | `.claude/skills/` (links; copies on Windows) | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | read on demand |
+| MCP config read | `.mcp.json` | `.codex/config.toml` | `.cursor/mcp.json` | `.mcp.json` | own settings | own settings |
 | Pre-tool guard (deny deletes, ask on prod) | ✅ ask | ✅ ask | ✅ deny | ✅ ask | ✅ deny | ❌ |
-| Session-start contract injection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Session-start contract injection | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Skill gate on Code-node writes | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 One contract, `AGENTS.md`, read natively by every tool in the table. One MCP
-source, `.mcp.json`, fanned out per tool by `npm run gen:agents`. One guard,
+source, `.mcp.json`, read directly by Claude Code and VS Code and fanned out to
+Cursor and Codex by `npm run gen:agents` (`.mcp.official.json` adds the
+instance's own server where a client can take a variable URL, see
+[03-MCP-SERVERS.md](03-MCP-SERVERS.md#registering-n8n-official)). One guard,
 `scripts/guard-pre-tool.mjs`, wired into every tool that runs pre-tool hooks.
 
 The guard can only *ask* where the tool supports it (Claude Code, Codex,
@@ -32,7 +37,7 @@ Edit the source, run the generator, commit both.
 | Source | Generated | Read by |
 |---|---|---|
 | `AGENTS.md` | `CLAUDE.md` (only if absent), `.aiassistant/rules/engagement.md` | Claude Code, Junie |
-| `.mcp.json` | `.vscode/mcp.json`, `.cursor/mcp.json`, `.codex/config.toml` | VS Code, Cursor, Codex |
+| `.mcp.json` + `.mcp.official.json` | `.cursor/mcp.json`, `.codex/config.toml` | Cursor, Codex (VS Code reads `.mcp.json` itself) |
 | `.agents/skills/` | `.claude/skills/` (symlinks; copies on Windows, see below) | Claude Code |
 
 ```bash
@@ -40,12 +45,11 @@ npm run gen:agents        # regenerate
 npm run check:agents      # exit 1 if stale; verify-setup runs it
 ```
 
-`.vscode/mcp.json` uses the `servers` key and an `inputs` block, so VS Code
-prompts for the key and stores it itself. `.cursor/mcp.json` uses `${env:VAR}`.
-`.codex/config.toml` does no variable expansion, so it lists the variables under
-`env_vars` and the bearer token under `bearer_token_env_var`; export `.env`
-before launching Codex. All three expand from the process environment, never
-from disk.
+`.cursor/mcp.json` uses `${env:VAR}`. `.codex/config.toml` does no variable
+expansion, so it lists the variables under `env_vars` and the bearer token
+under `bearer_token_env_var`; export `.env` before launching Codex. VS Code
+expands the plain `${VAR}` references in `.mcp.json` from its own process
+environment. All of them read the process environment, never disk.
 
 ## Claude Code
 
@@ -74,19 +78,39 @@ guard on `beforeShellExecution` and `beforeMCPExecution`.
 
 ## VS Code with GitHub Copilot
 
-Open the folder, `npm ci`, switch Copilot Chat to **Agent** mode, start the
-servers from `.vscode/mcp.json` (**MCP: List Servers**). VS Code prompts for the
-URL, key and access token on first use. Copilot reads `AGENTS.md` and
-`.agents/skills/`; `.github/hooks/n8n-guard.json` wires the guard with the
-cross-platform `command` key, which Copilot runs through bash on macOS and
-Linux and through PowerShell on Windows. The guard answers Copilot with
-`{"permissionDecision": "deny" | "ask", "permissionDecisionReason": ...}`
-and exit 0: on Copilot a non-zero exit is an error, not a decision, and the
-reason is lost.
+Export `.env` in a shell, then launch VS Code from that shell (`code .`):
+VS Code 1.143+ reads `.mcp.json` directly and fills the `${VAR}` references
+from its environment. Copilot refuses `${input:...}` prompts ("Input and
+command variables are not supported by the Copilot harness"), which is why
+nothing prompts for the key any more. Run `npm ci`, switch Copilot Chat to
+**Agent** mode and send any message first: servers cannot start before the
+first message creates the session runtime, and until then every server shows
+Error. The instance's own server is added once with **MCP: Add Server**
+([03-MCP-SERVERS.md](03-MCP-SERVERS.md#registering-n8n-official)).
 
-VS Code's hook loader also reads `.claude/settings.json` and
-`.claude/settings.local.json`. That is why the Claude Code hooks are
-repo-relative Node commands: the same file works in both.
+Copilot reads `AGENTS.md` and `.agents/skills/`. `.github/hooks/n8n-guard.json`
+wires the contract injection on `sessionStart` (the same script Claude Code
+uses, answering in Copilot's shape) and the guard on `preToolUse` and
+`preMcpToolCall`, all with the cross-platform `command` key (bash on macOS
+and Linux, PowerShell on Windows). The guard's skill gate sees Copilot's
+`skill` tool and `view` reads, so a Code-node write without the owning skill
+loaded is refused with the skill named. Copilot names
+MCP tools `<server>-<tool>`, `n8n-n8n_delete_workflow`, and the guard matches
+that form. It answers Copilot with
+`{"permissionDecision": "deny" | "ask", "permissionDecisionReason": ...}` and
+exit 0: on Copilot a non-zero exit is an error, not a decision, and the reason
+is lost. A denied call comes back to the model as
+`Denied by preToolUse hook: Archive, do not delete ...`.
+
+VS Code also offers to enable the Claude Code hooks from `.claude/settings.json`.
+They fire for shell commands only (the tool arrives as `Bash`), not for MCP
+tools, so the Copilot hook file is the guard that matters there. Both are
+repo-relative Node commands, so the same scripts serve both loaders.
+
+Copilot routes between models on its own and some of them refuse a delete at
+the contract level before any tool call; others need the hook. Both outcomes
+are correct. Verified end to end on VS Code 1.143.1 with Copilot Chat 0.71.0
+on Windows, 2026-10-25.
 
 Lower Copilot tiers skip reasoning steps, which shows up as skipped validation.
 Ask for the `connections` object every time. Copilot models also have a
@@ -164,13 +188,14 @@ Launch:
 Get-Content .env | Where-Object { $_ -match '^\s*[A-Z]' } | ForEach-Object {
   $k,$v = $_ -split '=',2; [Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim())
 }
-claude
+claude     # or: code .   (VS Code inherits the variables the same way)
 ```
 
 ## What does not port
 
-Session-start injection is Claude Code only. Everywhere else the agent has the
-contract and the skills index but is not prompted at the moment of the action.
+Session-start injection covers Claude Code and Copilot. Everywhere else the
+agent has the contract and the skills index but is not prompted at the moment
+of the action.
 Compensate with the deterministic layer, which is identical in every editor:
 
 ```bash

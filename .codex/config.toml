@@ -13,4 +13,5 @@ env_vars = ["N8N_API_URL", "N8N_API_KEY", "N8N_CF_CLIENT_ID", "N8N_CF_CLIENT_SEC
 
 [mcp_servers.n8n_official]
 # url references N8N_API_URL; Codex does not expand variables. Fill the literal URL:
-# url = "${N8N_API_URL:-http://unset.invalid}/mcp-server/http"
+# url = "${N8N_API_URL}/mcp-server/http"
+bearer_token_env_var = "N8N_MCP_ACCESS_TOKEN"
