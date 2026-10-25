@@ -177,6 +177,24 @@ needs Visual Studio Build Tools with the C++ workload and Python, and on
 macOS or Linux a C++ toolchain. Install Node 24 and run `npm ci` again; the
 install then takes seconds. CI runs the suite on Node 24 for the same reason.
 
+## The agent ignored a rule in a skill
+
+A skill is advice the model chose to read, or did not. Two deterministic
+answers, both in the harness:
+
+- The guard's skill gate refuses a workflow write that carries a Code, Code
+  Tool or AI Agent node until the owning skill was loaded in the session
+  (`Load the n8n-code-javascript skill first ...`). On Claude Code, Codex and
+  Copilot that turns "should have read it" into "cannot write without it".
+- A rule you need every time belongs in the lint, not only in the skill.
+  `lint-workflow --require-code-comment` fails any Code node whose code does
+  not open with a comment; add your own checks next to it. Promotion already
+  runs the lint, so a convention written there holds regardless of which
+  model or editor built the workflow.
+
+Reported as issue #6 (Copilot on Windows wrote a Code node without the
+comment header the team had added to `n8n-code-javascript`).
+
 ## VS Code with Copilot
 
 Checked on VS Code 1.143 with Copilot Chat 0.71 (2026-10-25). Four things look

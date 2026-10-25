@@ -80,7 +80,7 @@
         ]
       },
       {
-        "matcher": "Bash|mcp__.*",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",

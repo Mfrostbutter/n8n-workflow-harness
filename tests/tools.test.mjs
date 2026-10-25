@@ -272,6 +272,19 @@ test('lint passes a portable workflow and prints its manifest', () => {
   assert.match(r.out, /variables the target needs: API_BASE/);
 });
 
+test('lint --require-code-comment fails a Code node whose code does not open with a comment', () => {
+  const wf = structuredClone(portable);
+  wf.nodes.push({ name: 'Shape', type: 'n8n-nodes-base.code', typeVersion: 2, position: [600, 0], parameters: { jsCode: 'return $input.all();' } });
+  assert.equal(run(LINT, [wf]).code, 0);
+  const r = run(LINT, [wf], ['--require-code-comment']);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /Code node "Shape": code does not start with a comment/);
+  wf.nodes[3].parameters.jsCode = '// Keep every item as is.\nreturn $input.all();';
+  assert.equal(run(LINT, [wf], ['--require-code-comment']).code, 0);
+  wf.nodes[3].parameters = { language: 'python', pythonCode: '# Keep every item.\nreturn _input.all()' };
+  assert.equal(run(LINT, [wf], ['--require-code-comment']).code, 0);
+});
+
 test('lint blocks a localhost literal', () => {
   const wf = structuredClone(portable);
   wf.nodes[2].parameters.url = 'http://localhost:5678/webhook/x';

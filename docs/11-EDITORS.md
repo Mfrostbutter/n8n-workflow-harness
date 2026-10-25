@@ -14,7 +14,8 @@ varies is how much of the guidance and enforcement layer each one picks up.
 | 25 skills discovered | `.claude/skills/` (links; copies on Windows) | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` | read on demand |
 | MCP config read | `.mcp.json` | `.codex/config.toml` | `.cursor/mcp.json` | `.mcp.json` | own settings | own settings |
 | Pre-tool guard (deny deletes, ask on prod) | ✅ ask | ✅ ask | ✅ deny | ✅ ask | ✅ deny | ❌ |
-| Session-start contract injection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Session-start contract injection | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Skill gate on Code-node writes | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 One contract, `AGENTS.md`, read natively by every tool in the table. One MCP
 source, `.mcp.json`, read directly by Claude Code and VS Code and fanned out to
@@ -88,8 +89,12 @@ Error. The instance's own server is added once with **MCP: Add Server**
 ([03-MCP-SERVERS.md](03-MCP-SERVERS.md#registering-n8n-official)).
 
 Copilot reads `AGENTS.md` and `.agents/skills/`. `.github/hooks/n8n-guard.json`
-wires the guard on `preToolUse` and `preMcpToolCall` with the cross-platform
-`command` key (bash on macOS and Linux, PowerShell on Windows). Copilot names
+wires the contract injection on `sessionStart` (the same script Claude Code
+uses, answering in Copilot's shape) and the guard on `preToolUse` and
+`preMcpToolCall`, all with the cross-platform `command` key (bash on macOS
+and Linux, PowerShell on Windows). The guard's skill gate sees Copilot's
+`skill` tool and `view` reads, so a Code-node write without the owning skill
+loaded is refused with the skill named. Copilot names
 MCP tools `<server>-<tool>`, `n8n-n8n_delete_workflow`, and the guard matches
 that form. It answers Copilot with
 `{"permissionDecision": "deny" | "ask", "permissionDecisionReason": ...}` and
@@ -188,8 +193,9 @@ claude     # or: code .   (VS Code inherits the variables the same way)
 
 ## What does not port
 
-Session-start injection is Claude Code only. Everywhere else the agent has the
-contract and the skills index but is not prompted at the moment of the action.
+Session-start injection covers Claude Code and Copilot. Everywhere else the
+agent has the contract and the skills index but is not prompted at the moment
+of the action.
 Compensate with the deterministic layer, which is identical in every editor:
 
 ```bash

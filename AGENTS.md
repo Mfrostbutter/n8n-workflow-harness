@@ -33,7 +33,11 @@ credentials.
    `.claude/skills/`: links, or copies on Windows). `using-n8n-mcp-skills` is
    the router. Invoke the matching
    skill before writing an expression, configuring a node, designing a flow,
-   writing Code node logic, or promoting anything.
+   writing Code node logic, or promoting anything. The guard enforces the
+   Code-node part: a workflow write that carries a Code, Code Tool or AI
+   Agent node is refused until `n8n-code-javascript`, `n8n-code-python`,
+   `n8n-code-tool` or `n8n-agents` was loaded in this session. Load it,
+   then retry the same call.
 
 2. **Configure from the live schema, never from memory.** n8n's surface drifts
    between versions. Call `get_node` before setting parameters. If a skill

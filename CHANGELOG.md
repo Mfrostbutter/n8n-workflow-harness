@@ -31,6 +31,16 @@ path.
 - **Unset `${VAR}`.** Claude Code passes the placeholder through literally
   when the variable is unset. `scripts/mcp-server.mjs` scrubs such values
   (`scrubPlaceholders` in `lib.mjs`) so docs mode still works.
+- **Skill gate (issue #6).** A Copilot build on Windows ignored a rule the
+  team had added to `n8n-code-javascript`; the model never loaded the skill.
+  The guard now records skill loads per session (Skill tool, or a read of a
+  `SKILL.md`) and refuses a workflow write carrying a Code, Code Tool or AI
+  Agent node until the owning skill was loaded, naming it. On where the hook
+  sees skill loads (Claude Code, Codex, Copilot); `N8N_GUARD_SKILL_GATE=0`
+  turns it off. The Claude Code guard matcher widened to every tool so the
+  loads reach it. `lint-workflow --require-code-comment` makes the reporter's
+  convention checkable at promotion. Copilot also gets the session-start
+  contract injection (`sessionStart` in `n8n-guard.json`).
 - Smaller: the "Start a build" recipe asks `get_node` at `standard` detail
   (`minimal` carries no `typeVersion`); AGENTS.md rule 6 says the API key never
   goes into a shell command the agent composes itself (observed: Copilot tried

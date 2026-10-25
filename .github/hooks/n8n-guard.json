@@ -14,6 +14,13 @@
         "command": "node scripts/guard-pre-tool.mjs",
         "timeoutSec": 10
       }
+    ],
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "node .claude/hooks/session-start.mjs",
+        "timeoutSec": 10
+      }
     ]
   }
 }
