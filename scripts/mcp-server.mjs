@@ -9,6 +9,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { scrubPlaceholders } from './lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(HERE);
@@ -27,6 +28,10 @@ function resolveEntry() {
   } catch { /* not resolvable */ }
   return null;
 }
+
+// A client that does not expand `${VAR}` for an unset VAR hands the placeholder
+// over as the value (Claude Code does). Treat those as unset.
+scrubPlaceholders(process.env);
 
 // n8n-mcp ships its SSRF guard in strict mode, which refuses loopback and RFC1918
 // instance URLs. A dev box on the LAN is exactly that. Permissive unless the caller set it.

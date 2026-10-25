@@ -110,3 +110,38 @@ test('asks before a forced credential transfer, allows the plain one', () => {
   assert.equal(plain.status, 0);
   assert.equal(plain.stdout, '');
 });
+
+test('Copilot names MCP tools <server>-<tool>: deny on delete, deny on delete actions, ask on pull', () => {
+  const cp = (toolName, toolArgs) => ({ sessionId: 's', timestamp: 1, cwd: '/x', toolName, toolArgs });
+  const del = run(cp('n8n-n8n_delete_workflow', { id: '1' }));
+  assert.equal(del.status, 0);
+  assert.equal(JSON.parse(del.stdout).permissionDecision, 'deny');
+  assert.match(JSON.parse(del.stdout).permissionDecisionReason, /Archive, do not delete/);
+  const folder = run(cp('n8n-n8n_manage_folders', { action: 'delete', folderId: 'f' }));
+  assert.equal(JSON.parse(folder.stdout).permissionDecision, 'deny');
+  const pull = run(cp('powershell', { command: 'npx n8n-cli source-control pull', description: 'pull', initial_wait: 120 }));
+  assert.equal(JSON.parse(pull.stdout).permissionDecision, 'ask');
+  assert.match(JSON.parse(pull.stdout).permissionDecisionReason, /overwrites local workflows/);
+  const read = run(cp('n8n-n8n_get_workflow', { id: '1' }));
+  assert.equal(read.status, 0);
+  assert.equal(read.stdout, '');
+});
+
+test('Copilot preMcpToolCall shape (bare tool name, serverName, arguments) is denied on delete', () => {
+  const r = run({ toolCallId: 'n8n-n8n_delete_workflow:23', serverName: 'n8n', toolName: 'n8n_delete_workflow', arguments: { id: 'q' }, sessionId: 's', timestamp: 1, cwd: '/x' });
+  assert.equal(r.status, 0);
+  assert.equal(JSON.parse(r.stdout).permissionDecision, 'deny');
+  const act = run({ toolCallId: 'x', serverName: 'n8n', toolName: 'n8n_manage_credentials', arguments: { action: 'delete', id: 'c' }, sessionId: 's', timestamp: 1, cwd: '/x' });
+  assert.equal(JSON.parse(act.stdout).permissionDecision, 'deny');
+});
+
+test('Copilot SDK batched toolCalls: strictest verdict across the batch', () => {
+  const r = run({ sessionId: 's', cwd: '/x', toolCalls: [
+    { id: 'view:1', name: 'view', args: { path: '/x/AGENTS.md' } },
+    { id: 'n8n-n8n_delete_workflow:2', name: 'n8n-n8n_delete_workflow', args: { id: 'q' } },
+  ] });
+  assert.equal(r.status, 0);
+  assert.equal(JSON.parse(r.stdout).permissionDecision, 'deny');
+  const ok = run({ sessionId: 's', cwd: '/x', toolCalls: [{ id: 'view:1', name: 'view', args: { path: '/x/AGENTS.md' } }] });
+  assert.equal(ok.stdout, '');
+});

@@ -262,3 +262,12 @@ export function fail(msg, code = 2) {
 export function slugify(name) {
   return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
 }
+
+/** Drops env values that are unexpanded config placeholders (`${VAR}`), which Claude Code passes through when VAR is unset. Returns the names removed. */
+export function scrubPlaceholders(env = process.env) {
+  const gone = [];
+  for (const [k, v] of Object.entries(env)) {
+    if (typeof v === 'string' && /^\$\{[A-Za-z0-9_:-]*\}$/.test(v.trim())) { delete env[k]; gone.push(k); }
+  }
+  return gone;
+}

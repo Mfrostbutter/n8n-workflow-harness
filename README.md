@@ -61,8 +61,8 @@ CLAUDE.md                   @AGENTS.md plus Claude Code specifics
 AI_SETUP_PROMPT.md          paste-in prompt that sets up and verifies the harness
 setup.sh / setup.ps1        one-time wiring for a fresh clone
 package.json                pins n8n-mcp, @n8n/cli, @n8n/workflow-sdk; package-lock.json locks them
-.mcp.json                   the three MCP servers (source of the per-tool configs)
-.vscode/mcp.json            VS Code + Copilot                             generated
+.mcp.json                   n8n-docs and n8n MCP servers (source of the per-tool configs)
+.mcp.official.json          n8n-official, registered per editor (docs/03-MCP-SERVERS.md)
 .cursor/mcp.json            Cursor                                        generated
 .codex/config.toml          Codex                                         generated
 .aiassistant/rules/         JetBrains Junie                               generated

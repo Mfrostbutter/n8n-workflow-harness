@@ -54,8 +54,7 @@
   },
   "enabledMcpjsonServers": [
     "n8n-docs",
-    "n8n",
-    "n8n-official"
+    "n8n"
   ],
   "hooks": {
     "SessionStart": [

@@ -21,19 +21,12 @@
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
         "DISABLE_CONSOLE_OUTPUT": "true",
-        "N8N_API_URL": "${N8N_API_URL:-}",
-        "N8N_API_KEY": "${N8N_API_KEY:-}",
-        "N8N_CF_CLIENT_ID": "${N8N_CF_CLIENT_ID:-}",
-        "N8N_CF_CLIENT_SECRET": "${N8N_CF_CLIENT_SECRET:-}",
-        "WEBHOOK_SECURITY_MODE": "${WEBHOOK_SECURITY_MODE:-permissive}",
+        "N8N_API_URL": "${N8N_API_URL}",
+        "N8N_API_KEY": "${N8N_API_KEY}",
+        "N8N_CF_CLIENT_ID": "${N8N_CF_CLIENT_ID}",
+        "N8N_CF_CLIENT_SECRET": "${N8N_CF_CLIENT_SECRET}",
+        "WEBHOOK_SECURITY_MODE": "${WEBHOOK_SECURITY_MODE}",
         "N8N_MCP_TELEMETRY_DISABLED": "true"
-      }
-    },
-    "n8n-official": {
-      "type": "http",
-      "url": "${N8N_API_URL:-http://unset.invalid}/mcp-server/http",
-      "headers": {
-        "Authorization": "Bearer ${N8N_MCP_ACCESS_TOKEN:-}"
       }
     }
   }

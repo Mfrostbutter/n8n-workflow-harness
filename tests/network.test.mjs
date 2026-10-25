@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { classifyNetworkError, privateAddress, proxyEnv, fail, ExitSignal } from '../scripts/lib.mjs';
+import { classifyNetworkError, privateAddress, proxyEnv, fail, ExitSignal, scrubPlaceholders } from '../scripts/lib.mjs';
 
 test('classifyNetworkError names the TLS fix for certificate errors', () => {
   for (const e of ['DEPTH_ZERO_SELF_SIGNED_CERT: self-signed certificate', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE: unable to verify', 'CERT_HAS_EXPIRED: certificate has expired']) {
@@ -62,4 +62,11 @@ test('a script that calls fail() right after a fetch exits with its code, on eve
   assert.equal(r.status, 4, r.stderr);
   assert.match(r.stderr, /ERROR: after fetch/);
   assert.doesNotMatch(r.stderr, /Assertion failed|UV_HANDLE_CLOSING/);
+});
+
+test('scrubPlaceholders drops unexpanded ${VAR} values and keeps real ones', () => {
+  const env = { N8N_API_URL: '${N8N_API_URL}', N8N_API_KEY: ' ${N8N_API_KEY} ', WEBHOOK_SECURITY_MODE: '${WEBHOOK_SECURITY_MODE:-permissive}', KEEP: 'http://10.0.0.5:5678', ALSO: 'has ${X} inside' };
+  const gone = scrubPlaceholders(env);
+  assert.deepEqual(gone.sort(), ['N8N_API_KEY', 'N8N_API_URL', 'WEBHOOK_SECURITY_MODE']);
+  assert.deepEqual(env, { KEEP: 'http://10.0.0.5:5678', ALSO: 'has ${X} inside' });
 });

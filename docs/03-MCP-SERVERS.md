@@ -248,11 +248,29 @@ For `n8n-official`, `/mcp` shows the connection state; the first call is
 means the access token (Settings → Instance-level MCP, generated per user)
 is missing or belongs to another instance.
 
+## Registering `n8n-official`
+
+Its URL is `${N8N_API_URL}/mcp-server/http`, built from a variable, and the
+clients disagree about that. Claude Code, Cursor and Codex expand or annotate
+it; GitHub Copilot validates the string as written and rejects the entire
+`.mcp.json` over it; VS Code skips the server with a log warning. So the
+definition lives in `.mcp.official.json`, not in `.mcp.json`, and is
+registered per editor:
+
+- **Claude Code:** once, after exporting `.env`:
+  `claude mcp add --transport http --scope local n8n-official "$N8N_API_URL/mcp-server/http" --header "Authorization: Bearer $N8N_MCP_ACCESS_TOKEN"`.
+  Local scope keeps the literal URL and token out of the repository.
+- **Cursor and Codex:** the generator merges `.mcp.official.json` into their
+  configs (`npm run gen:agents`).
+- **VS Code with Copilot:** **MCP: Add Server**, type HTTP, the literal URL and
+  the bearer header. It is stored in your user profile, not the repository.
+
 ## Scoping and approval
 
-All three servers are declared in the project `.mcp.json`, so they exist only when
-Claude Code runs in this directory, and Claude Code asks you to approve them on
-first use. `.claude/settings.json` lists them under `enabledMcpjsonServers`.
+`n8n-docs` and `n8n` are declared in the project `.mcp.json`, so they exist
+only when Claude Code runs in this directory, and Claude Code asks you to
+approve them on first use. `.claude/settings.json` lists them under
+`enabledMcpjsonServers`.
 
 To work docs-only for a while — reviewing JSON, no instance access — remove
 `"n8n"` from that list, or unset `N8N_API_URL` before launching.

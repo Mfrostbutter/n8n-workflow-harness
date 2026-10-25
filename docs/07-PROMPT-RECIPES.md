@@ -41,8 +41,8 @@ comes back will look right and be wrong in ways you find in production.
 > Read CLAUDE.md. I want to build <one sentence>. Before writing anything:
 > check `search_templates` for something close, tell me which pattern from
 > `n8n-workflow-patterns` fits, and list the nodes you intend to use with the
-> `typeVersion` each one reports from `get_node`. Do not create the workflow
-> until I confirm the plan.
+> `typeVersion` each one reports from `get_node` at `standard` detail. Do not
+> create the workflow until I confirm the plan.
 
 Forces design before code, and surfaces version drift before it is baked in.
 

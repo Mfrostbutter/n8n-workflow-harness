@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "n8n-official": {
+      "type": "http",
+      "url": "${N8N_API_URL}/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer ${N8N_MCP_ACCESS_TOKEN}"
+      }
+    }
+  }
+}

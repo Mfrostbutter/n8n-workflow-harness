@@ -126,9 +126,18 @@ fi
 
 echo
 echo "== editor support"
-for f in .mcp.json .vscode/mcp.json .cursor/mcp.json; do
+for f in .mcp.json .mcp.official.json .cursor/mcp.json; do
   [ -f "$f" ] && ok "$f present" || bad "$f missing"
 done
+# VS Code reads .mcp.json itself; a leftover generated copy loads every server twice.
+[ -f .vscode/mcp.json ] && bad ".vscode/mcp.json is no longer generated; delete it (VS Code reads .mcp.json and would load the servers twice)"
+# Copilot validates every url in .mcp.json as written; a variable there disables all servers.
+node -e '
+  const c = JSON.parse(require("fs").readFileSync(".mcp.json","utf8")).mcpServers || {};
+  const bad = Object.entries(c).filter(([, s]) => s.url && /\$\{/.test(s.url)).map(([n]) => n);
+  if (bad.length) { console.log("  FAIL  .mcp.json url built from a variable (" + bad.join(", ") + "): Copilot rejects the whole file. Move it to .mcp.official.json"); process.exit(3); }
+  console.log("  ok    .mcp.json has no variable-built url (Copilot-safe)");
+' || FAIL=$((FAIL+1))
 for f in AGENTS.md CLAUDE.md .codex/config.toml .aiassistant/rules/engagement.md; do
   [ -f "$f" ] || bad "$f missing (run: npm run gen:agents)"
 done
@@ -138,15 +147,6 @@ if [ -f scripts/gen-agent-configs.mjs ]; then
   else
     bad "generated agent configs are stale. Run: npm run gen:agents"
   fi
-fi
-# VS Code uses "servers"; Cursor and Claude Code use "mcpServers". Mixing them
-# up produces a config the editor silently ignores.
-if [ -f .vscode/mcp.json ]; then
-  node -e '
-    const c = JSON.parse(require("fs").readFileSync(".vscode/mcp.json","utf8"));
-    if (!c.servers) { console.log("  FAIL  .vscode/mcp.json must use the \"servers\" key, not \"mcpServers\""); process.exit(3); }
-    console.log("  ok    .vscode/mcp.json uses the \"servers\" key VS Code expects");
-  ' || FAIL=$((FAIL+1))
 fi
 if [ -f .cursor/mcp.json ]; then
   node -e '

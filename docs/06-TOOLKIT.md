@@ -183,7 +183,7 @@ command line. The rule and the API detail: the `n8n-credential-mapping` skill.
 ```
 
 From `AGENTS.md`: `CLAUDE.md` (only if absent) and `.aiassistant/rules/`.
-From `.mcp.json`: `.vscode/mcp.json`, `.cursor/mcp.json`, `.codex/config.toml`.
+From `.mcp.json` (plus `.mcp.official.json`): `.cursor/mcp.json`, `.codex/config.toml`. VS Code and Claude Code read `.mcp.json` directly.
 From `.agents/skills/`: links in `.claude/skills/` (`--copy` on Windows).
 
 ## `guard-pre-tool` — the hook every editor runs

@@ -1,9 +1,10 @@
 // Generates the per-tool agent configuration from three sources so the
 // repository works in Claude Code, Codex, Cursor, Copilot/VS Code, Devin and
-// JetBrains without four hand-maintained copies.
+// JetBrains without hand-maintained copies.
 //
 //   AGENTS.md        -> CLAUDE.md (stub, only if absent), .aiassistant/rules/engagement.md
-//   .mcp.json        -> .vscode/mcp.json, .cursor/mcp.json, .codex/config.toml
+//   .mcp.json        -> .cursor/mcp.json, .codex/config.toml (VS Code reads .mcp.json itself)
+//   .mcp.official.json -> merged into the Cursor and Codex outputs only
 //   .agents/skills/  -> .claude/skills/<name> (symlink, or copy with --copy)
 //
 // Usage: node scripts/gen-agent-configs.mjs [--check] [--copy]
@@ -54,30 +55,25 @@ emit('.aiassistant/rules/engagement.md', `---\napply: always\n---\n${BANNER('AGE
 const mcpPath = join(KIT_DIR, '.mcp.json');
 if (existsSync(mcpPath)) {
   const servers = JSON.parse(readFileSync(mcpPath, 'utf8')).mcpServers ?? {};
+  // .mcp.official.json holds the instance's own MCP server, whose url is built from
+  // a variable. Copilot validates that url as written and refuses the whole root
+  // file over it, and VS Code skips it, so it lives apart: merged here for Cursor
+  // and Codex (both expand or annotate it), added by hand elsewhere (03-MCP-SERVERS.md).
+  const officialPath = join(KIT_DIR, '.mcp.official.json');
+  const official = existsSync(officialPath) ? JSON.parse(readFileSync(officialPath, 'utf8')).mcpServers ?? {} : {};
+  const withOfficial = { ...servers, ...official };
   const VAR = /\$\{([A-Z0-9_]+)(?::-[^}]*)?\}/g;
   const varsIn = (s) => [...String(s).matchAll(VAR)].map((m) => m[1]);
-  const isSecret = (v) => /KEY|TOKEN|SECRET|PASSWORD/i.test(v);
 
-  // VS Code: `servers`, secrets prompted through `inputs` and stored by the editor.
-  const inputs = new Map();
-  const vs = {};
+  // VS Code reads the root .mcp.json itself (1.143+, Copilot Chat 0.71+) and
+  // expands plain ${VAR} from the editor's environment; a generated
+  // .vscode/mcp.json would load the same servers twice and cost tool budget.
+  // Nothing is emitted for it.
   const sub = (s, f) => String(s).replace(VAR, (_, v) => f(v));
-  for (const [name, c] of Object.entries(servers)) {
-    const toInput = (v) => {
-      if (!inputs.has(v)) inputs.set(v, { type: 'promptString', id: v, description: `${v} (leave blank if not used)`, ...(isSecret(v) ? { password: true } : {}) });
-      return `\${input:${v}}`;
-    };
-    if (c.url) {
-      vs[name] = { type: c.type === 'sse' ? 'sse' : 'http', url: sub(c.url, toInput), ...(c.headers ? { headers: Object.fromEntries(Object.entries(c.headers).map(([k, v]) => [k, sub(v, toInput)])) } : {}) };
-    } else {
-      vs[name] = { type: 'stdio', command: c.command, args: (c.args ?? []).map((a) => sub(a, toInput)), ...(c.env ? { env: Object.fromEntries(Object.entries(c.env).map(([k, v]) => [k, sub(v, toInput)])) } : {}) };
-    }
-  }
-  emit('.vscode/mcp.json', `${JSON.stringify({ inputs: [...inputs.values()], servers: vs }, null, 2)}\n`);
 
   // Cursor: same shape as Claude Code, `${env:VAR}` syntax.
   const cur = {};
-  for (const [name, c] of Object.entries(servers)) {
+  for (const [name, c] of Object.entries(withOfficial)) {
     const e = (s) => sub(s, (v) => `\${env:${v}}`);
     cur[name] = c.url
       ? { url: e(c.url), ...(c.headers ? { headers: Object.fromEntries(Object.entries(c.headers).map(([k, v]) => [k, e(v)])) } : {}) }
@@ -89,7 +85,7 @@ if (existsSync(mcpPath)) {
   // variable cannot be expressed and is written as a comment to fill in.
   const q = (s) => JSON.stringify(String(s));
   const lines = ['# GENERATED from .mcp.json by scripts/gen-agent-configs.mjs. Trusted projects only.', ''];
-  for (const [name, c] of Object.entries(servers)) {
+  for (const [name, c] of Object.entries(withOfficial)) {
     const key = name.replace(/[^A-Za-z0-9_]/g, '_');
     lines.push(`[mcp_servers.${key}]`);
     if (c.url) {
