@@ -27,8 +27,8 @@ async function main() {
   // --- 1. Runtime
   console.log('runtime');
   const major = Number(process.versions.node.split('.')[0]);
-  if (major >= 18) ok(`node ${process.versions.node}`);
-  else bad(`node ${process.versions.node} is too old`, 'these tools need Node 18+ (fetch, top-level await)');
+  if (major >= 24) ok(`node ${process.versions.node}`);
+  else bad(`node ${process.versions.node} is below the floor`, 'the harness needs Node 24: isolated-vm (via @n8n/expression-runtime) ships prebuilt binaries for that line only');
 
   // --- 2. Environment
   console.log('\nenvironment');
@@ -51,8 +51,9 @@ async function main() {
   if (pxNames.length) ok(`proxy/TLS variables: ${pxNames.map((k) => `${k} (${px[k]} chars)`).join(', ')}`);
   else ok('no proxy or CA variables set (direct connection)');
   if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
-    bad('NODE_TLS_REJECT_UNAUTHORIZED=0 turns off certificate checks for the whole process', 'remove it; put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem> instead');
+    bad('NODE_TLS_REJECT_UNAUTHORIZED=0 turns off certificate checks for the whole process', 'remove it; put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem>, or set NODE_USE_SYSTEM_CA=1 when the CA is in the OS trust store (both before Node starts)');
   }
+  if (process.env.NODE_USE_SYSTEM_CA === '1') ok('NODE_USE_SYSTEM_CA=1: certificates in the OS trust store are accepted');
   const proxyVar = pxNames.find((k) => /^https?_proxy$/i.test(k));
   if (proxyVar && !process.env.NODE_USE_ENV_PROXY) {
     note(`${proxyVar} is set but the toolkit's fetch ignores it until NODE_USE_ENV_PROXY=1 (the MCP server follows it on its own)`);

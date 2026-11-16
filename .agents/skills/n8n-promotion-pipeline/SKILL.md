@@ -16,7 +16,7 @@ description: >-
 
 # n8n promotion pipeline
 
-Written 2026-10-19 from `@n8n/cli` 0.22.0 (`n8n-cli --help` and the skill the
+Written 2026-10-19 from `@n8n/cli` 0.22.0, re-checked 2026-11-16 against 0.24.0, the pin (`n8n-cli --help` and the skill the
 package ships). The CLI is official (`github.com/n8n-io/n8n`, package
 `@n8n/cli`). Re-check the command surface with `npx @n8n/cli@<pin> --help`
 when the pin moves; this file is a cache of that output, not the source.
@@ -32,11 +32,23 @@ nothing arrives by hand?
 | **Promotion connections** (`n8n-cli promotion-*`) | Instance-to-instance through a Git repo. Source instance `promote`s (export, commit, push); target instance `apply`s (reset to branch tip, import). Reviewed-commit apply pins the exact SHA a human reviewed. | Licensed customer with two or more instances and a Git host. The default for an enterprise engagement. |
 | **Source control environments** (Settings > Environments; `n8n-cli source-control pull`) | Each instance bound to a branch. Push from dev, PR between branches, pull on prod. The older feature; still the one with the in-product UI. | Customer already runs it, or wants the editor-side push button. One direction per instance. |
 | **Packages** (`n8n-cli package export|import`, `.n8np`, beta) | A file carrying selected workflows, folders or projects plus stubs, with explicit conflict and binding policies on import. | Air-gapped targets, one-off migrations, moving a demo into a customer tenant, seeding a tenant from a template set. |
-| **Harness deploy** (`scripts/deploy.sh`, public API) | PUT by name with the engagement's credential ledger, tag and canvas gates, read-back verification. | Dev only, and community-licensed instances where none of the above exists. Never the production path on a licensed customer. |
+| **Harness deploy** (`./scripts/deploy.sh <file> [env] [--confirm]`, public API) | `validate` and `lint-workflow --require-tags --require-placement` first, then create or update by id or name, placement (transfer, folder, tags), read-back compared with the file. Never activates. | Dev, and community edition instances where none of the above exists. Never the production path on a licensed customer. |
 
 Decide on day one, write it into the engagement `CLAUDE.md` under Promotion
 path, and never mix two mechanisms on one target: each assumes it owns the
 instance's state.
+
+**Community edition** has no promotions, no environments and no team
+projects or folders over the public API (`/projects` is 403, the folder routes
+403 or 404, `n8n-cli project list` fails on the license). The path is the
+harness deploy: one `workflows/<env>/` per instance, `deploy.sh <file> dev`
+on the build instance, `deploy.sh <file> prod --confirm` on the second with
+its own `N8N_API_URL_PROD` pair; placement is tags only, with
+`N8N_PLACEMENT_FOLDERS=skip` set in that instance's `.env` so `place` and
+`deploy` do not stop on the missing folder (they say it once and move on).
+Credentials and variables are recreated on the target by name from the
+`lint-workflow` manifest. `package export` and `import` do work on community
+edition for a one-off move; `promotion-*` and `source-control` do not.
 
 ## What travels and what never does
 
@@ -82,8 +94,8 @@ The CI templates in the engagement scaffold run 2 to 4 on every push.
 Prerequisites: licensed instance with the promotions module; an API key whose
 scopes include `gitConnection:*` (plus `variable:list` for promote when
 workflows reference variables); a Git repository the customer owns; the CLI
-pinned in the engagement (`npm i --save-exact @n8n/cli@0.22.0`) or run as
-`npx @n8n/cli@0.22.0`. Configure with `N8N_URL` and `N8N_API_KEY` from the
+pinned in the engagement (`npm i --save-exact @n8n/cli@0.24.0`) or run as
+`npx @n8n/cli@0.24.0`. Configure with `N8N_URL` and `N8N_API_KEY` from the
 engagement `.env`, never flags on the command line.
 
 ```bash
@@ -164,9 +176,9 @@ SHA. Check `$?` or the `status` field before reading `counts`.
 
 ```bash
 n8n-cli package export -p <projectId> -o release-2026-10-19.n8np \
-  --workflowVersionPolicy published-strict \
+  --versionPolicy published-strict \
   --credentialExportPolicy no-values \
-  --missingWorkflowDependencyPolicy fail
+  --dependencyPolicy fail
 
 n8n-cli package import --file release-2026-10-19.n8np -p <targetProjectId> \
   --workflowConflictPolicy new-version \
@@ -230,7 +242,7 @@ and the rollback (`export-all` snapshot plus `apply` of the previous SHA).
 ## Related
 
 - `CLI_REFERENCE.md` in this directory: the command and flag tables for
-  `@n8n/cli` 0.22.0, captured verbatim.
+  `@n8n/cli` 0.24.0, captured verbatim.
 - `n8n-enterprise-delivery`: license tiers, RBAC, external secrets, the
   promotion checklist.
 - `n8n-workflow-as-code`: making the diff a reviewer sees readable.

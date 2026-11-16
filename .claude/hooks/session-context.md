@@ -18,5 +18,8 @@ Rules that hold for this whole session:
    `./scripts/drift-check.sh` before trusting `workflows/`.
 6. Every workflow is tagged, in a project, in a folder: `tags`, `project`,
    `folder` in the JSON, `./scripts/organize.sh place` after the create.
+   An instance without folder support (community edition) is reported once by
+   `place`; do not retry folder creation there. Tags-only placement on such an
+   instance is a decision recorded as `N8N_PLACEMENT_FOLDERS=skip` in `.env`.
 
 Check templates (`search_templates`) before building a workflow from scratch.

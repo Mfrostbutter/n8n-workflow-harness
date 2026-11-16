@@ -45,7 +45,8 @@ const DENY_CMD = [
 ];
 const ASK_CMD = [
   [/\b(deploy\.sh|deploy_workflow\.py)\b[^|;&]*\b(prod|production|staging)\b/, 'Deploy to a non-dev environment. The promotion path, not an ad-hoc write, moves changes to staging and prod.'],
-  [/\bn8n-cli\s+promotion-connection\s+(promote|apply|apply-continue|promote-selection|apply-selection|apply-selection-continue)\b/, 'A promotion writes to a Git branch or overwrites a target instance. Confirm the reviewed commit and the rollback snapshot exist.'],
+  // promotion-connection up to @n8n/cli 0.24; promotion-environment from 0.25 on. Both ask.
+  [/\bn8n-cli\s+promotion-(connection|environment)\s+(promote|apply|apply-continue|promote-selection|apply-selection|apply-selection-continue)\b/, 'A promotion writes to a Git branch or overwrites a target instance. Confirm the reviewed commit and the rollback snapshot exist.'],
   [/\bn8n-cli\s+source-control\s+pull\b/, 'A source-control pull overwrites local workflows with Git. Confirm export-all ran first.'],
   [/\bn8n-cli\s+workflow\s+activate\b/, 'Activating over the CLI skips validate-and-verify. Confirm validation and a read-back happened.'],
   [/\borganize(\.sh|\.mjs)\s+credentials\b[^|;&]*--force\b/, 'A forced credential transfer takes the credential away from every workflow outside the destination project; they fail at their next run. Confirm the list organize printed without --force.'],

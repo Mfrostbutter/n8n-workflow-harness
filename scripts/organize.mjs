@@ -21,7 +21,7 @@
 // a personal workflow is never transferred and its credential scope is not checked.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { loadEnv, resolveTarget, request, apiAll, fail, ExitSignal } from './lib.mjs';
+import { loadEnv, resolveTarget, request, apiAll, fail, ExitSignal, instanceCache, rememberInstance } from './lib.mjs';
 
 export const PERSONAL = 'personal';
 const errText = (r) => r.error ?? r.body?.message ?? (r.body ? JSON.stringify(r.body).slice(0, 300) : '');
@@ -69,11 +69,29 @@ export const workflowProjectId = (wf) => (wf.shared ?? []).find((s) => s.role ==
 
 // ----------------------------------------------------------------- folders
 
+// The folders API is licensed (feat:folders): a community edition instance answers 404
+// (route not registered) or 403 on every folder route. Learned once per instance and
+// cached for a day, so the fact is stated once and not re-discovered on every run.
+export const NO_FOLDERS = 'skip';
+export const folderMode = () => String(process.env.N8N_PLACEMENT_FOLDERS ?? '').trim().toLowerCase();
+
+/** True when this instance is known (cached) to have no folder support. */
+export const knownNoFolders = (t) => instanceCache(t.url).folders === 'unsupported';
+
+function noteNoFolders(t, status) {
+  const first = !knownNoFolders(t);
+  rememberInstance(t.url, { folders: 'unsupported', foldersStatus: status });
+  if (!first) return;
+  console.log(`  note  ${t.url} has no folder support (HTTP ${status} on the folders API: community edition or unlicensed). Said once per instance per day.`);
+}
+
 export async function folders(t, projectId, { soft = false } = {}) {
+  if (knownNoFolders(t)) return null;
   const out = [];
   let skip = 0;
   for (;;) {
     const r = await request(t, 'GET', `/projects/${projectId}/folders?take=100&skip=${skip}`);
+    if (r.status === 403 || r.status === 404) { noteNoFolders(t, r.status); return null; }
     if (r.status !== 200) {
       if (soft) return null;
       fail(`folder list FAILED HTTP ${r.status}: ${errText(r)} (folders need n8n 2.19+ on a registered or licensed instance)`, 1);
@@ -85,11 +103,18 @@ export async function folders(t, projectId, { soft = false } = {}) {
   }
 }
 
-/** Folder id for a path like "Demos/Order intake", creating what is missing. */
+/** Folder id for a path like "Demos/Order intake", creating what is missing.
+ *  On an instance without folders: {id: null, skipped: true} when
+ *  N8N_PLACEMENT_FOLDERS=skip, otherwise a stop that names the decision. */
 export async function ensureFolder(t, projectId, path, { dry = false } = {}) {
   const segments = String(path ?? '').split('/').map((s) => s.trim()).filter(Boolean);
   if (!segments.length) fail('workflow has no "folder". Add "folder": "<name or path>"; the project root is not organized.', 1);
   const have = await folders(t, projectId);
+  if (have === null) {
+    if (folderMode() === NO_FOLDERS) return { id: null, created: [], skipped: true };
+    const status = instanceCache(t.url).foldersStatus ?? '404';
+    fail(`folders: ${t.url} has no folder support (HTTP ${status} on the folders API: community edition or unlicensed), and the placement rule asks for folder "${path}". Decide once for this instance: set N8N_PLACEMENT_FOLDERS=skip in .env to place with tags only (folders are skipped, said once), or point the session at an instance with folders.`, 1);
+  }
   let parent = null;
   const created = [];
   for (const seg of segments) {
@@ -306,7 +331,7 @@ export function placement(wf) {
   return { tags, project: String(wf.project ?? '').trim(), folder: String(wf.folder ?? '').trim() };
 }
 
-const SETTINGS_KEYS = ['executionOrder', 'timezone', 'saveDataErrorExecution', 'saveDataSuccessExecution',
+export const SETTINGS_KEYS = ['executionOrder', 'timezone', 'saveDataErrorExecution', 'saveDataSuccessExecution',
   'saveManualExecutions', 'saveExecutionProgress', 'errorWorkflow', 'executionTimeout', 'callerPolicy', 'callerIds'];
 
 /** Puts a live workflow where its JSON says: project (transfer), folder (PUT with
@@ -335,9 +360,10 @@ export async function placeWorkflow(t, wid, wf, { creds = null, dry = false, bod
   report.project = project.name;
   report.transfer = needsTransfer;
 
-  const { id: folderId, created } = await ensureFolder(t, project.id, folderPath, { dry });
+  const { id: folderId, created, skipped } = await ensureFolder(t, project.id, folderPath, { dry });
   report.folder = folderPath;
   report.folderCreated = created;
+  report.folderSkipped = Boolean(skipped);
   report.tags = tags;
   if (dry) return report;
 
@@ -349,7 +375,8 @@ export async function placeWorkflow(t, wid, wf, { creds = null, dry = false, bod
     name: live.name, nodes: live.nodes, connections: live.connections,
     settings: Object.fromEntries(Object.entries(live.settings ?? {}).filter(([k]) => SETTINGS_KEYS.includes(k))),
   };
-  const put = await request(t, 'PUT', `/workflows/${wid}`, { ...update, parentFolderId: folderId });
+  // No folder support: the PUT carries no parentFolderId (the instance would reject the key).
+  const put = await request(t, 'PUT', `/workflows/${wid}`, skipped ? update : { ...update, parentFolderId: folderId });
   if (!ok(put)) fail(`folder placement PUT FAILED HTTP ${put.status}: ${errText(put)}`, 1);
   await setTags(t, wid, tags);
 
@@ -357,7 +384,7 @@ export async function placeWorkflow(t, wid, wf, { creds = null, dry = false, bod
   const after = await request(t, 'GET', `/workflows/${wid}`);
   const final = after.body ?? {};
   if (project.id !== PERSONAL && workflowProjectId(final) !== project.id) fail(`VERIFY FAILED: workflow is not in project '${project.name}' after transfer`, 1);
-  report.folderTotal = await folderCount(t, project.id, folderId);
+  report.folderTotal = skipped ? null : await folderCount(t, project.id, folderId);
   report.liveTags = (final.tags ?? []).map((x) => x.name).sort();
   report.draft = Boolean(final.active) && final.versionId !== final.activeVersionId;
   return report;
@@ -365,9 +392,9 @@ export async function placeWorkflow(t, wid, wf, { creds = null, dry = false, bod
 
 export function formatReport(r) {
   let line = `  ${r.name}\n    project ${r.project}${r.transfer ? '  (transferred)' : ''}`
-    + `\n    folder  ${r.folder}${r.folderCreated?.length ? `  (created ${r.folderCreated.join(', ')})` : ''}`
+    + `\n    folder  ${r.folder}${r.folderSkipped ? '  (skipped: no folder support on this instance)' : r.folderCreated?.length ? `  (created ${r.folderCreated.join(', ')})` : ''}`
     + `\n    tags    ${r.tags.join(', ')}`;
-  if ('folderTotal' in r) line += `\n    verify  folder holds ${r.folderTotal} workflow(s); live tags [${r.liveTags.join(', ')}]`;
+  if ('folderTotal' in r) line += `\n    verify  ${r.folderSkipped ? 'no folder' : `folder holds ${r.folderTotal} workflow(s)`}; live tags [${r.liveTags.join(', ')}]`;
   if (r.draft) line += '\n    WARNING an unpublished draft is live (versionId != activeVersionId). Publish it: publish_workflow on the official server, or the editor\'s Publish button.';
   return line;
 }
@@ -390,7 +417,10 @@ export function loadFiles(path) {
 }
 
 export async function cmdAudit(t) {
-  const projs = await projects(t);
+  // Community edition answers 403 on /projects (team projects are licensed); audit the rest.
+  const pr = await request(t, 'GET', '/projects?limit=250');
+  if (pr.status === 403) console.log(`  note  ${t.url} does not expose projects (HTTP 403: community edition or unlicensed). Per-project counts and scope checks are skipped.\n`);
+  const projs = pr.status === 403 ? [] : await projects(t);
   const wfs = await apiAll(t, '/workflows');
   const creds = await credentialsIndex(t);
   const tables = await dataTablesIndex(t);

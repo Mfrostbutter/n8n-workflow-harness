@@ -5,17 +5,18 @@
   "description": "Harness for building and promoting n8n workflows with coding agents: skills, both n8n-mcp servers plus the official instance MCP, the official CLI and SDK, and a deterministic toolkit",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
-    "@n8n/cli": "0.22.0",
+    "@n8n/cli": "0.24.0",
     "@n8n/workflow-sdk": "0.36.5",
     "n8n-mcp": "2.94.3"
   },
   "scripts": {
     "verify": "./scripts/verify-setup.sh",
-    "test": "node --test tests/tools.test.mjs tests/network.test.mjs tests/instance.test.mjs tests/organize.test.mjs tests/secret-map.test.mjs tests/guard.test.mjs",
+    "test": "node --test tests/tools.test.mjs tests/network.test.mjs tests/instance.test.mjs tests/organize.test.mjs tests/deploy.test.mjs tests/secret-map.test.mjs tests/guard.test.mjs",
     "doctor": "node scripts/doctor.mjs",
+    "deploy": "node scripts/deploy.mjs",
     "drift": "node scripts/drift-check.mjs",
     "export": "node scripts/export-all.mjs",
     "smoke": "node scripts/mcp-smoke.mjs",

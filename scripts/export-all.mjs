@@ -26,8 +26,17 @@ console.log(`exporting from ${target.url} -> workflows/${envName}/`);
 mkdirSync(outDir, { recursive: true });
 
 // The list endpoint omits nodes and connections, so fetch each workflow by id.
+// apiAll fails (exit 2) when the instance is unreachable or the key is rejected;
+// an empty list from a reachable instance is a clean result, not an error.
 const list = await apiAll(target, '/workflows');
-if (!list.length) fail('no workflows returned. Check the URL, the key, and that the public API is enabled.', 1);
+if (!list.length) {
+  console.log(`0 workflows on ${target.url}: nothing to export. The instance answered and the key works; workflows/${envName}/ is left as it is.\n`);
+  process.exitCode = 0;
+} else {
+  await exportAll(list);
+}
+
+async function exportAll(list) {
 
 let count = 0;
 const seen = new Map();
@@ -66,3 +75,4 @@ console.log('Now commit. This is the rollback point:');
 console.log(`  git add -A && git commit -m 'snapshot ${envName} before <change>'\n`);
 console.log('NOTE: workflow JSON embeds credential REFERENCES and internal hostnames.');
 console.log('It does not contain credential values. Review a diff before pushing anywhere public.');
+}

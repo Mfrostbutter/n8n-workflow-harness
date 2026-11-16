@@ -1,6 +1,11 @@
-# @n8n/cli 0.22.0 reference
+# @n8n/cli 0.24.0 reference
 
-Captured 2026-10-19 from `npx @n8n/cli@0.22.0 --help` and per-command help.
+Captured 2026-10-19 from `npx @n8n/cli@0.22.0 --help` and per-command help,
+re-checked 2026-11-16 against 0.24.0, the pin: same topics and commands, two
+package export flags renamed (marked below). 0.22.0 cannot export a package
+from n8n 2.44.x (`request/body must NOT have additional properties`). From
+0.25.0 the `promotion-connection` topic is `promotion-environment` and the
+package import flags are renamed, so this file holds for the pin only.
 Install: `npm i -g @n8n/cli` or `npx @n8n/cli <command>`. Binary: `n8n-cli`.
 Zero dependencies; talks to the public API. Config resolution: flags
 (`--url`, `--apiKey`) > env (`N8N_URL`, `N8N_API_KEY`) > `~/.n8n-cli/config.json`
@@ -43,8 +48,8 @@ Subcommand help: `n8n-cli promotion-connection:apply --help` (colon form) or
 | `--includeVariableValues` | true/false | |
 | `--includeTags` | true/false | |
 | `--includeArchivedWorkflows` | true/false | |
-| `--missingWorkflowDependencyPolicy` | `fail`, `reference-only`, `include-in-package` | sub-workflows not selected |
-| `--workflowVersionPolicy` | `published-strict`, `prefer-published`, `ignore-unpublished`, `latest` | which version ships |
+| `--dependencyPolicy` (0.22: `--missingWorkflowDependencyPolicy`) | `fail`, `reference-only`, `include-in-package` | sub-workflows not selected |
+| `--versionPolicy` (0.22: `--workflowVersionPolicy`) | `published-strict`, `prefer-published`, `ignore-unpublished`, `latest` | which version ships |
 | `--credentialExportPolicy` | `expression-values-only` (instance default), `no-values` | literal values never travel |
 
 ## package import flags

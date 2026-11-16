@@ -55,6 +55,7 @@ test('asks on prod deploys and promotions in the Claude shape', () => {
   const asks = [
     [sh('./scripts/deploy.sh workflows/prod/x.json prod --confirm'), /promotion path/],
     [sh('n8n-cli promotion-connection apply c1'), /reviewed commit/],
+    [sh('n8n-cli promotion-environment apply e1'), /reviewed commit/],
     [sh('n8n-cli source-control pull'), /overwrites/],
   ];
   for (const [p, hint] of asks) {
