@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-11-16
+
+Four reports from a team running the harness on Claude Code in WSL against
+n8n 2.44.6 community edition containers, each reproduced on a local 2.44.6
+container before the change.
+
+- **`@n8n/cli` 0.22.0 cannot export a package from n8n 2.44.x**
+  (`request/body must NOT have additional properties`). Pin moved to 0.24.0,
+  the newest release that keeps the `promotion-connection` commands and the
+  package import flags the `n8n-promotion-pipeline` skill documents; 0.23.0
+  through 1.2.1 all export cleanly, but 0.25.0 renames `promotion-connection`
+  to `promotion-environment` and the import flags, which needs a skill pass
+  before the pin moves again. Two package export flags did rename at 0.23
+  (`--dependencyPolicy`, `--versionPolicy`); skill and reference updated. The
+  guard asks on both `promotion-connection` and `promotion-environment`.
+- **`deploy.sh` was referenced but did not ship.** `scripts/deploy.mjs` and
+  its wrapper now exist: validate and lint gates, create or update by id or
+  name, placement, read-back compared with the file, `--confirm` outside dev,
+  `--dry-run`. Eight tests. The enterprise doc and the promotion skill say
+  what a community edition instance does, which has no promotions,
+  environments, team projects or folders over the public API.
+- **`export-all` on an instance with no workflows** was an error. It is exit 0
+  with `0 workflows on <url>: nothing to export`; unreachable and rejected-key
+  stay exit 2. Tests for both.
+- **Folder warnings repeated on every run** on community edition. The toolkit
+  learns once per instance (a day, OS temp dir) that the folder routes answer
+  403 or 404, says so once, and stops asking. `organize place` and `deploy`
+  then stop with the decision named, or place tags only when
+  `N8N_PLACEMENT_FOLDERS=skip` is set for that instance; where folders exist
+  nothing changes. `audit` tolerates a 403 on `/projects`.
+- Node 24 is the floor everywhere (`engines`, setup scripts, preflight,
+  `doctor`, docs); it was documented as 20+ while Windows already needed 24.
+- `NODE_USE_SYSTEM_CA=1` documented beside `NODE_EXTRA_CA_CERTS` as the other
+  way to trust a self-signed or corporate CA, both process-start variables;
+  `doctor` and the network hint name both.
+
 ## 2026-10-25
 
 VS Code + Copilot, verified by hand on Windows (VS Code 1.143.1, Copilot Chat

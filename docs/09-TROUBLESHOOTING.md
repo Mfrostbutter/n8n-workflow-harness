@@ -159,8 +159,22 @@ export NODE_EXTRA_CA_CERTS=/path/to/corp-ca.pem  # the CA bundle, PEM, from your
 
 PowerShell: `$env:NODE_USE_ENV_PROXY='1'; $env:NODE_EXTRA_CA_CERTS='C:\path\corp-ca.pem'`.
 
+When the CA (corporate or the self-signed one on a dev instance) is already in
+the operating system's trust store, `NODE_USE_SYSTEM_CA=1` makes Node use that
+store instead of a bundle file: the Windows certificate store, the macOS
+keychain, or the OpenSSL directory on Linux and in WSL. Both variables are
+process-start variables: Node reads them once, before any code runs, so they
+have to be in the environment of the shell that launches the editor or the
+script. Setting them inside a running session, or in a tool call, changes
+nothing for that process.
+
+```bash
+export NODE_USE_SYSTEM_CA=1                    # Node 24 (the floor) supports it
+```
+
 Never `NODE_TLS_REJECT_UNAUTHORIZED=0`. It disables certificate checks for the
-whole process, Node prints a warning, and `doctor` fails on it.
+whole process, Node prints a warning, and `doctor` fails on it and names both
+alternatives.
 
 `doctor` reports which proxy and CA variables are set (names and lengths
 only), notes a proxy variable that `fetch` is ignoring, and on an unreachable
@@ -276,7 +290,7 @@ Current Node resolves a bare directory as a module.
 - Confirm it is installed and matches the pin: `./scripts/verify-setup.sh`.
 - Run the launcher directly: `node scripts/mcp-server.mjs`. It prints the path
   it searched.
-- Node must be 20+. `node --version`.
+- Node must be 24. `node --version`.
 - A partial install (interrupted `npm ci`) can leave the package without its
   node database. `verify-setup` checks for `data/nodes.db` specifically;
   reinstall with `npm ci` if it is missing.

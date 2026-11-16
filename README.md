@@ -186,7 +186,7 @@ matches your instance.
 So this harness treats it as a **pinned dependency, not a runtime download**:
 
 ```json
-"dependencies": { "@n8n/cli": "0.22.0", "@n8n/workflow-sdk": "0.36.5", "n8n-mcp": "2.94.3" }
+"dependencies": { "@n8n/cli": "0.24.0", "@n8n/workflow-sdk": "0.36.5", "n8n-mcp": "2.94.3" }
 ```
 
 `package-lock.json` is committed with the integrity hash, `npm ci` gives a
@@ -247,6 +247,7 @@ truth when the model and reality disagree.
 | `./scripts/health-check.sh [hours]` | Instance up, workflows active, recent failure count |
 | `./scripts/drift-check.sh [env]` | Whether `workflows/` and the live instance agree. Exit 1 on drift |
 | `./scripts/export-all.sh [env]` | Snapshot every workflow. The rollback point |
+| `./scripts/deploy.sh <file> [env]` | Validate and lint, then PUT one workflow by name over the public API, place it, read it back. Dev, and community edition instances that have no promotion path |
 | `./scripts/validate.sh <file>` | Offline structural checks on workflow JSON |
 | `./scripts/lint-workflow.sh <file or dir>` | Promotion lint: environment literals, nameless credentials, `$env`, tags, error workflow. Prints the credentials and variables the target needs |
 | `./scripts/wf-diff.sh <a> <b>` | What changed between two workflow files, ignoring canvas moves. `git diff` shows the same view |
@@ -341,7 +342,9 @@ Promotion paths, managed settings, CI and hand-over: [docs/12-ENTERPRISE.md](doc
 
 ## Requirements
 
-- Node 20+ and npm (the toolkit, the CLI and the two n8n-mcp servers need it)
+- Node 24 and npm (the toolkit, the CLI and the two n8n-mcp servers need it;
+  `isolated-vm`, pulled in through `@n8n/expression-runtime`, ships prebuilt
+  binaries for that line only, so 24 is the floor on every platform)
 - Git
 - An MCP-capable agent: Claude Code, Codex, Cursor, VS Code with Copilot (Agent
   mode), Devin, JetBrains Junie, or another MCP client

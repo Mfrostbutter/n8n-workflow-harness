@@ -87,7 +87,10 @@ credentials.
    without them and `./scripts/organize.sh place` applies them after the
    create. Credentials and Data Tables are created in the same project; a
    workflow moved without them fails at its first run. `n8n-project-organization`
-   has the rule and the tool.
+   has the rule and the tool. On an instance without folder support (community
+   edition) `place` says so once and stops; tags-only placement there is a
+   decision the operator records as `N8N_PLACEMENT_FOLDERS=skip` in `.env`,
+   never a retry.
 
 ## Working order for any change
 
@@ -119,6 +122,7 @@ editor.
 | `./scripts/drift-check.sh [env]` | Before trusting `workflows/`. Exit 1 on drift |
 | `./scripts/export-all.sh [env]` | Before every change. The rollback point |
 | `./scripts/validate.sh <file>` | Before every deploy: structure |
+| `./scripts/deploy.sh <file> [env] [--confirm]` | One workflow to one instance over the public API, gates first, read back after. Dev, and community edition instances that have no promotion path; `--confirm` and the guard's question outside dev |
 | `./scripts/lint-workflow.sh <file or dir>` | Before every promotion: environment literals, nameless credentials, `$env`, tags, placement, error workflow; prints the credentials and variables the target needs |
 | `./scripts/organize.sh audit\|place\|credentials\|tables\|project` | What sits where, and fixing it: untagged and personal-project workflows, credential and data table scope, batch placement, credential transfer, table copies |
 | `./scripts/secret-map.sh check\|sync\|rotate\|verify\|ids` | Credentials from the secret manager by name: `check` the map against the manager and the target's schemas, `sync` creates what is missing in its project, `verify` before a hand-over. Run under `infisical run` |

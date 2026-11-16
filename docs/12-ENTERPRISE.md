@@ -13,7 +13,7 @@ one of three paths, in order of preference:
 |---|---|---|
 | n8n Promotions (`npx n8n-cli promotion-connection ...`) | n8n ≥ 2.40, licensed, a Git provider registered on the instance | `n8n-promotion-pipeline` |
 | Environments / source control (`npx n8n-cli source-control pull` on the target) | Enterprise license, one branch per environment | `n8n-enterprise-delivery` |
-| Export, lint, import (`export-all`, `lint-workflow`, `deploy.sh <file> prod`) | Public API on both instances | `n8n-enterprise-delivery` |
+| Export, lint, deploy (`export-all`, `lint-workflow`, `./scripts/deploy.sh <file> prod --confirm`) | Public API on both instances | `n8n-promotion-pipeline` |
 
 Every path has the same gate: `lint-workflow` clean on the files being promoted,
 a committed export of the target taken while `drift-check` was clean, and a
@@ -23,6 +23,30 @@ commands that write to a non-dev environment.
 `lint-workflow` prints the credentials and variables a workflow references.
 That list is the handover to whoever owns the target instance: every name must
 exist there before the promotion, with the same credential type.
+
+### Community edition
+
+A community edition instance (no license key) has none of the first two paths:
+no promotions module, no source-control environments, and the public API
+answers 403 on `/projects` (team projects are licensed; `n8n-cli project list`
+fails with a license error) and 403 or 404 on every folder route
+(`feat:folders`). What remains is the third path, which the harness ships:
+
+- One `workflows/<env>/` directory per instance, exported with `export-all`.
+- `./scripts/deploy.sh <file> dev` for the build instance;
+  `./scripts/deploy.sh <file> prod --confirm` for a second instance, with its
+  own `N8N_API_URL_PROD` pair in `.env`. Validate and lint run first; the
+  workflow is created or updated by name, tagged, read back and compared with
+  the file. Nothing is activated: publish after a run on the target.
+- Placement is tags only. `organize place` and `deploy` learn once per instance
+  that folders are unavailable and say so once; set
+  `N8N_PLACEMENT_FOLDERS=skip` in that instance's `.env` to accept tags-only
+  placement there. Without it they stop and name the decision, so a licensed
+  target never silently loses its folder.
+
+The `project` key stays `personal` on community edition. Credentials and
+variables still travel by name: the `lint-workflow` manifest is the list to
+recreate on the second instance before the first deploy.
 
 ## Source control
 

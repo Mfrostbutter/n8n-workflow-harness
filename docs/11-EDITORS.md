@@ -173,7 +173,8 @@ Four things differ:
    `$CLAUDE_PROJECT_DIR`. The Copilot hook file uses the `command` key, which
    Copilot runs through PowerShell on Windows.
 3. **Proxy and TLS inspection.** `NODE_USE_ENV_PROXY=1` for the toolkit,
-   `NODE_EXTRA_CA_CERTS=<ca.pem>` for everything, set in the PowerShell
+   `NODE_EXTRA_CA_CERTS=<ca.pem>` (or `NODE_USE_SYSTEM_CA=1` when the CA is
+   in the Windows certificate store) for everything, set in the PowerShell
    session before `claude`. Details in
    [09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#behind-a-corporate-proxy-or-tls-inspection).
 4. **Exit codes.** The toolkit never calls `process.exit()` after a request;

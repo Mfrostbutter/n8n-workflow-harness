@@ -22,10 +22,10 @@ echo "== prerequisites"
 if command -v node >/dev/null 2>&1; then
   V="$(node --version | sed 's/^v//')"
   MAJ="${V%%.*}"
-  if [ "$MAJ" -ge 20 ] 2>/dev/null; then ok "node $V"
-  else bad "node $V is too old. Need 20+."; fi
+  if [ "$MAJ" -ge 24 ] 2>/dev/null; then ok "node $V"
+  else bad "node $V is below the floor. Need 24: isolated-vm (via @n8n/expression-runtime) ships prebuilt binaries for that line only."; fi
 else
-  bad "node not found. Install Node 20+; the toolkit and the MCP servers need it."
+  bad "node not found. Install Node 24; the toolkit and the MCP servers need it."
 fi
 command -v npx >/dev/null 2>&1 && ok "npx present" || bad "npx not found (ships with Node)"
 command -v git >/dev/null 2>&1 && ok "git present" || bad "git not found"
