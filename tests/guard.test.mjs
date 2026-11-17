@@ -25,6 +25,8 @@ test('allows dev deploys, reads, lists and dry runs', () => {
     sh('./scripts/deploy.sh workflows/dev/x.json dev'),
     sh('n8n-cli workflow list'),
     sh('n8n-cli promotion-connection list-changes p apply'),
+    sh('npx @n8n/cli@0.27.0 promotion-environment list-changes p apply'),
+    sh('n8n-cli promotion-environment connect e1'),
     claude('mcp__n8n__n8n_get_workflow', { id: '1' }),
     claude('mcp__n8n__n8n_manage_credentials', { action: 'list' }),
   ];
@@ -56,6 +58,9 @@ test('asks on prod deploys and promotions in the Claude shape', () => {
     [sh('./scripts/deploy.sh workflows/prod/x.json prod --confirm'), /promotion path/],
     [sh('n8n-cli promotion-connection apply c1'), /reviewed commit/],
     [sh('n8n-cli promotion-environment apply e1'), /reviewed commit/],
+    [sh('npx @n8n/cli@0.27.0 promotion-environment apply e1'), /reviewed commit/],
+    [sh('npx @n8n/cli promotion-environment create-missing-projects e1'), /reviewed commit/],
+    [sh('npx @n8n/cli@0.27.0 source-control pull'), /overwrites/],
     [sh('n8n-cli source-control pull'), /overwrites/],
   ];
   for (const [p, hint] of asks) {

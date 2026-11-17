@@ -186,7 +186,7 @@ matches your instance.
 So this harness treats it as a **pinned dependency, not a runtime download**:
 
 ```json
-"dependencies": { "@n8n/cli": "0.24.0", "@n8n/workflow-sdk": "0.36.5", "n8n-mcp": "2.94.3" }
+"dependencies": { "@n8n/cli": "0.27.0", "@n8n/workflow-sdk": "0.36.5", "n8n-mcp": "2.94.3" }
 ```
 
 `package-lock.json` is committed with the integrity hash, `npm ci` gives a

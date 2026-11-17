@@ -72,7 +72,11 @@ mentioned in `ATTRIBUTION.md`, `README.md`, and `03-MCP-SERVERS.md`. Regenerate
 
 `@n8n/cli` and `@n8n/workflow-sdk` follow the same procedure. Bump the CLI
 when the instance moves to a release whose promotion or package features the
-skills describe; `npx n8n-cli --version` after the bump.
+skills describe; `npx n8n-cli --version` after the bump. Pin the npm `latest`
+tag, not `rc` or `beta`, and re-capture `n8n-promotion-pipeline/CLI_REFERENCE.md`
+from `--help` at the new pin: the command surface has changed between minors.
+`npx n8n-cli` is safe only after `npm ci`; without the pinned package npx
+downloads an unrelated third-party package of that name.
 
 Bump the server and the skills together when you can: the skills describe the
 server's tools, and a large gap between them is where "the skill names a tool
