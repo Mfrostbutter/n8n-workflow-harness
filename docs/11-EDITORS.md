@@ -182,6 +182,11 @@ Four things differ:
    you add a script, use `process.exitCode` or `fail()` from `lib.mjs`. The
    test suite runs on `windows-latest` in CI to keep it that way.
 
+WSL is the Linux path, not this one: run `./setup.sh` inside the distribution
+and use the `.sh` wrappers. VS Code on Windows attached to WSL has one trap
+with `.env`, described in
+[09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#wsl-vs-code-with-the-claude-code-extension-ignores-env-changes).
+
 Launch:
 
 ```powershell

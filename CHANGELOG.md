@@ -35,6 +35,11 @@ container before the change.
 - `NODE_USE_SYSTEM_CA=1` documented beside `NODE_EXTRA_CA_CERTS` as the other
   way to trust a self-signed or corporate CA, both process-start variables;
   `doctor` and the network hint name both.
+- `doctor` on an instance with no workflows says so and no longer asks for an
+  export; the setup and troubleshooting pages say there is nothing to commit.
+- WSL with VS Code attached: `.env` changes do not reach the Claude Code
+  extension until the VS Code Server restarts. Documented as reported, not
+  yet reproduced by the maintainers.
 
 ## 2026-10-25
 

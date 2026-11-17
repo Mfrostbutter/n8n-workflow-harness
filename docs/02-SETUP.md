@@ -181,6 +181,9 @@ git add -A && git commit -m "baseline: instance state before any change"
 Do this **before** the first change, not after. A snapshot taken while the repo
 and the instance already disagreed is not a rollback point.
 
+On an empty instance `export-all` prints `0 workflows ... nothing to export`
+and exits 0. There is nothing to commit; skip the commit and go on.
+
 ## 7. Prove the loop end to end
 
 Against a scratch or dev instance, never a customer's prod:

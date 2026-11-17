@@ -84,8 +84,10 @@ async function main() {
   }
 
   const probe = await api(target, '/workflows?limit=1', { timeoutMs: 15000 });
+  // A reachable instance with no workflows has nothing to export.
+  const emptyInstance = probe.status === 200 && Array.isArray(probe.body?.data) && probe.body.data.length === 0;
   if (probe.status === 200) {
-    ok('reachable and authenticated');
+    ok(emptyInstance ? 'reachable and authenticated (0 workflows)' : 'reachable and authenticated');
   } else if (probe.status === 0) {
     bad(`unreachable (${probe.error ?? 'no response'})`, classifyNetworkError(probe.error));
   } else if (probe.status === 401 || probe.status === 403) {
@@ -115,7 +117,10 @@ async function main() {
   if (existsSync(wfDir)) {
     const n = readdirSync(wfDir).filter((f) => f.endsWith('.json')).length;
     if (n > 0) ok(`workflows/${envName}/ has ${n} exported workflow${n === 1 ? '' : 's'}`);
+    else if (emptyInstance) ok(`workflows/${envName}/ is empty and so is the instance: nothing to snapshot yet`);
     else note(`workflows/${envName}/ is empty. Run export-all to create a rollback point.`);
+  } else if (emptyInstance) {
+    ok(`no workflows/${envName}/ directory and no workflows on the instance: nothing to snapshot yet`);
   } else {
     note(`no workflows/${envName}/ directory yet. Run export-all.`);
   }

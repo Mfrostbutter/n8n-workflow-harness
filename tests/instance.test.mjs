@@ -269,6 +269,18 @@ test('doctor passes against a healthy instance', async () => {
   assert.match(r.out, /RESULT: ok/);
 });
 
+test('doctor does not ask for an export when the instance has no workflows', async () => {
+  state.workflows = [];
+  execFileSync('git', ['init', '-q'], { cwd: kit });
+  writeFileSync(join(kit, '.gitignore'), '.env\n');
+  writeFileSync(join(kit, '.env'), `N8N_API_URL=${base}\nN8N_API_KEY=test-key\n`);
+  const r = await run('doctor.mjs', ['dev']);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /0 workflows/);
+  assert.match(r.out, /nothing to snapshot yet/);
+  assert.doesNotMatch(r.out, /Run export-all/);
+});
+
 test('doctor reports a rejected key rather than crashing', async () => {
   writeFileSync(join(kit, '.env'), `N8N_API_URL=${base}\nN8N_API_KEY=test-key\n`);
   state.authOk = false;
