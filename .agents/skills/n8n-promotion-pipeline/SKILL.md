@@ -32,11 +32,28 @@ directions as `configs.promote` and `configs.apply`, each cloned with
 `clone <id> <direction>`. From 0.25.0 a promotion *environment* is one
 direction on one repository, created and connected on its own; the topic is
 `promotion-environment`, `clone` is `connect`, `set-config` is `update` with
-`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. Not
-checked here against a licensed instance: if `promotion-environment` answers
-404 on an older n8n, that instance still serves the connection API; drive it
-with `npx @n8n/cli@0.24.0 promotion-connection ...` until it is upgraded, and
-say so in the engagement `CLAUDE.md`.
+`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. The
+promotion commands below are written from the CLI's help, not from a run
+against a licensed instance.
+
+**The CLI version has to match the instance.** The package and promotion
+request bodies are strict and change between releases, in both directions: a
+CLI newer than the instance fails the same way as one that is older.
+`package export` answering `request/body must NOT have additional properties`
+is that mismatch, not a bad workflow. Measured 2026-11-16 and 2026-11-17:
+
+| Instance | `package export` accepted | Rejected |
+|---|---|---|
+| n8n 2.35.5 | 0.14.0, 0.15.0 | 0.16.0 through 0.27.0 |
+| n8n 2.44.6 | 0.23.0 through 1.2.1 | 0.22.0 |
+
+`promotion-provider` and `promotion-environment` answer 404 on n8n 2.35.5
+(promotions arrive in 2.40). So 0.27.0 is the harness default for a current
+instance, and an engagement pins the release that its own instance accepts:
+try `npx @n8n/cli@<version> package export -w <id>` on dev, write the version
+that works into the engagement `CLAUDE.md`, and move it with every n8n
+upgrade. For a pre-0.25 CLI the promotion topic is `promotion-connection` and
+the flags are the old names (`@n8n/cli@0.24.0 --help`).
 
 The question this skill answers: a workflow works on dev. How does it reach
 production so that a reviewer saw it, the target has what it needs, and

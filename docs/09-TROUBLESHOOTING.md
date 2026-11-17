@@ -278,6 +278,30 @@ baseline commit and start building. A wrong URL, a rejected key or a disabled
 public API is exit 2 with the cause; `./scripts/doctor.sh` distinguishes
 these.
 
+## `n8n-cli package export`: "request/body must NOT have additional properties"
+
+The CLI and the instance are different generations. The package API checks
+the request body strictly and the body changes between releases, so a CLI
+that is newer than the instance fails the same way as one that is older.
+Measured:
+
+| Instance | `package export` accepted | Rejected |
+|---|---|---|
+| n8n 2.35.5 | 0.14.0, 0.15.0 | 0.16.0 through 0.27.0 |
+| n8n 2.44.6 | 0.23.0 through 1.2.1 | 0.22.0 |
+
+Find the release the instance accepts and pin it for that engagement:
+
+```bash
+npx @n8n/cli@0.15.0 package export -w <workflowId> -o test.n8np
+```
+
+Flag names differ by release (`--missingWorkflowDependencyPolicy` before
+0.23.0, `--dependencyPolicy` after); read `--help` at the version you run.
+`promotion-provider` and `promotion-environment` answering 404 means the
+instance predates promotions (n8n 2.40), is unlicensed, or is older than the
+CLI's promotion model.
+
 ## WSL: VS Code with the Claude Code extension ignores `.env` changes
 
 Reported on 2026-11-13 by a team running Claude Code in WSL with VS Code on

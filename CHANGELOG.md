@@ -14,6 +14,12 @@
   `list-repositories` and `list-branches`, `--credentialConflictPolicy`,
   Agents in packages. The promotion commands are documented from the CLI's
   help and bundled skill, not from a run against a licensed instance.
+- **The CLI has to match the instance, in both directions.** Tested against
+  n8n 2.35.5: `package export` works with 0.14.0 and 0.15.0 and fails with
+  0.16.0 through 0.27.0 (`request/body must NOT have additional properties`),
+  the same error 0.22.0 gives against 2.44.6. The promotion routes are 404
+  there. The skill and a new troubleshooting entry carry the table and say to
+  pin per engagement; 0.27.0 is the default for a current instance.
 - **The guard matches `npx @n8n/cli[@version] ...`** as well as `n8n-cli ...`.
   The skill recommended the first spelling and the guard only saw the second,
   so a promotion apply typed that way was not asked about.

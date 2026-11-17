@@ -75,6 +75,9 @@ when the instance moves to a release whose promotion or package features the
 skills describe; `npx n8n-cli --version` after the bump. Pin the npm `latest`
 tag, not `rc` or `beta`, and re-capture `n8n-promotion-pipeline/CLI_REFERENCE.md`
 from `--help` at the new pin: the command surface has changed between minors.
+The pin is the default for a current instance. An engagement on an older n8n
+pins the CLI release its instance accepts
+([09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#n8n-cli-package-export-requestbody-must-not-have-additional-properties)).
 `npx n8n-cli` is safe only after `npm ci`; without the pinned package npx
 downloads an unrelated third-party package of that name.
 
