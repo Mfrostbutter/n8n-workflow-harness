@@ -122,6 +122,29 @@ test('export-all writes one file per workflow', async () => {
   assert.match(r.out, /exported 1 workflows/);
 });
 
+test('export-all exits 0 with a plain message on a reachable instance with no workflows', async () => {
+  state.workflows = [];
+  const r = await run('export-all.mjs', ['dev']);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /0 workflows on http:\/\/127\.0\.0\.1:\d+: nothing to export/);
+  assert.doesNotMatch(r.out, /ERROR/);
+  assert.deepEqual(exported(), []);
+});
+
+test('export-all still fails when the instance is unreachable or the key is rejected', async () => {
+  const probe = createServer();
+  await new Promise((r) => probe.listen(0, '127.0.0.1', r));
+  const closed = `http://127.0.0.1:${probe.address().port}`;
+  await new Promise((r) => probe.close(r));
+  let r = await run('export-all.mjs', ['dev'], { N8N_API_URL: closed });
+  assert.equal(r.code, 2);
+  assert.match(r.out, /ERROR: GET .* returned 0/);
+  state.authOk = false;
+  r = await run('export-all.mjs', ['dev']);
+  assert.equal(r.code, 2);
+  assert.match(r.out, /returned 401/);
+});
+
 test('export-all output round-trips through validate', async () => {
   await run('export-all.mjs', ['dev']);
   const r = await run('validate.mjs', [join(kit, 'workflows', 'dev', 'order-intake.json')]);
@@ -246,6 +269,18 @@ test('doctor passes against a healthy instance', async () => {
   assert.match(r.out, /RESULT: ok/);
 });
 
+test('doctor does not ask for an export when the instance has no workflows', async () => {
+  state.workflows = [];
+  execFileSync('git', ['init', '-q'], { cwd: kit });
+  writeFileSync(join(kit, '.gitignore'), '.env\n');
+  writeFileSync(join(kit, '.env'), `N8N_API_URL=${base}\nN8N_API_KEY=test-key\n`);
+  const r = await run('doctor.mjs', ['dev']);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /0 workflows/);
+  assert.match(r.out, /nothing to snapshot yet/);
+  assert.doesNotMatch(r.out, /Run export-all/);
+});
+
 test('doctor reports a rejected key rather than crashing', async () => {
   writeFileSync(join(kit, '.env'), `N8N_API_URL=${base}\nN8N_API_KEY=test-key\n`);
   state.authOk = false;
@@ -287,6 +322,7 @@ test('doctor names the cause and the fix when the instance is unreachable', asyn
   assert.match(viaProxy.out, /NODE_USE_ENV_PROXY=1/);
   const tls = await run('doctor.mjs', ['dev'], { NODE_TLS_REJECT_UNAUTHORIZED: '0' });
   assert.match(tls.out, /NODE_EXTRA_CA_CERTS/);
+  assert.match(tls.out, /NODE_USE_SYSTEM_CA=1/);
   assert.equal(tls.code, 1);
 });
 

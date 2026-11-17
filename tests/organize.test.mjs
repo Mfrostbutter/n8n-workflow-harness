@@ -74,7 +74,9 @@ before(async () => {
       if (req.headers['x-n8n-api-key'] !== 'test-key') return send(401, { message: 'unauthorized' });
       const list = (data) => send(200, { data, nextCursor: null });
       let m;
-      if (p === '/projects' && req.method === 'GET') return list(state.projects);
+      // Community edition: team projects and folders are licensed; /projects is 403 and the folder routes are not registered (404).
+      if (p === '/projects' && req.method === 'GET') return state.community ? send(403, { message: 'Your license does not allow for feat:projectRole:admin.' }) : list(state.projects);
+      if (state.community && /^\/projects\/[^/]+\/folders/.test(p)) return send(404, { message: 'not found' });
       if (p === '/projects' && req.method === 'POST') { state.projects.push({ id: `proj${state.projects.length}`, name: body.name, type: 'team' }); state.folders[`proj${state.projects.length - 1}`] = []; return send(201); }
       if (p === '/credentials' && req.method === 'GET') return list(state.creds);
       if ((m = p.match(/^\/credentials\/([^/]+)\/transfer$/))) {
@@ -142,13 +144,15 @@ beforeEach(() => {
   mkdirSync(join(kit, 'workflows', 'dev'), { recursive: true });
   for (const f of ['lib.mjs', 'organize.mjs', 'lint-workflow.mjs']) writeFileSync(join(kit, 'scripts', f), readFileSync(join(TOOLS, f)));
   state = freshState();
+  state.community = false;
   calls = [];
 });
 
 async function run(tool, args = [], env = {}) {
   try {
+    // The instance cache lives in the per-test kit, so no test sees another's folder verdict.
     const { stdout } = await execFileAsync(process.execPath, [join(kit, 'scripts', tool), ...args], {
-      encoding: 'utf8', env: { ...process.env, N8N_API_URL: base, N8N_API_KEY: 'test-key', ...env },
+      encoding: 'utf8', env: { ...process.env, N8N_API_URL: base, N8N_API_KEY: 'test-key', N8N_HARNESS_CACHE_DIR: join(kit, 'cache'), N8N_PLACEMENT_FOLDERS: '', ...env },
     });
     return { code: 0, out: stdout };
   } catch (e) {
@@ -251,6 +255,57 @@ test('place is idempotent: a second run creates nothing and transfers nothing', 
   assert.doesNotMatch(r.out, /\(transferred\)|\(created/);
   assert.ok(!calls.includes('PUT /workflows/wfA/transfer'));
   assert.ok(!calls.some((c) => c.startsWith('POST /projects/projAcme/folders')));
+});
+
+// ----------------------------------------------------- community edition
+
+test('place on an instance without folders stops with the decision, once per run, and writes nothing', async () => {
+  state.community = true;
+  const wf = { ...WF(), project: 'personal' };
+  let r = await run('organize.mjs', ['place', writeWf(wf)]);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /has no folder support \(HTTP 404/);
+  assert.match(r.out, /N8N_PLACEMENT_FOLDERS=skip/);
+  assert.ok(!calls.some((c) => /^(PUT|POST|PATCH)/.test(c)), calls.join('\n'));
+  // the verdict is cached: the second run does not ask the folders API again
+  calls = [];
+  r = await run('organize.mjs', ['place', writeWf(wf)]);
+  assert.equal(r.code, 1);
+  assert.ok(!calls.some((c) => /\/folders/.test(c)), calls.join('\n'));
+});
+
+test('place with N8N_PLACEMENT_FOLDERS=skip places tags, skips the folder, and says so once', async () => {
+  state.community = true;
+  const wf = { ...WF(), project: 'personal' };
+  let r = await run('organize.mjs', ['place', writeWf(wf)], { N8N_PLACEMENT_FOLDERS: 'skip' });
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /note {2}http:\/\/127\.0\.0\.1:\d+ has no folder support \(HTTP 404/);
+  assert.match(r.out, /folder {2}Order intake\/API {2}\(skipped: no folder support on this instance\)/);
+  assert.match(r.out, /verify {2}no folder; live tags \[acme, order-intake\]/);
+  assert.deepEqual(live('wfA').tags.map((t) => t.name), ['acme', 'order-intake']);
+  assert.equal(live('wfA').parentFolderId, undefined);
+  assert.ok(!calls.some((c) => /^POST \/projects/.test(c)), calls.join('\n'));
+  // second run: silent about folders, no folder call at all
+  calls = [];
+  r = await run('organize.mjs', ['place', writeWf(wf)], { N8N_PLACEMENT_FOLDERS: 'skip' });
+  assert.equal(r.code, 0, r.out);
+  assert.doesNotMatch(r.out, /has no folder support/);
+  assert.ok(!calls.some((c) => /\/folders/.test(c)), calls.join('\n'));
+});
+
+test('folders stay required where the instance supports them, whatever N8N_PLACEMENT_FOLDERS says', async () => {
+  const r = await run('organize.mjs', ['place', writeWf(WF())], { N8N_PLACEMENT_FOLDERS: 'skip' });
+  assert.equal(r.code, 0, r.out);
+  assert.equal(live('wfA').parentFolderId, 'f2');
+  assert.doesNotMatch(r.out, /skipped/);
+});
+
+test('audit on an instance that answers 403 on projects reports it and audits the rest', async () => {
+  state.community = true;
+  const r = await run('organize.mjs', ['audit']);
+  assert.match(r.out, /does not expose projects \(HTTP 403/);
+  assert.match(r.out, /untagged workflows: 2/);
+  assert.match(r.out, /RESULT: findings/);
 });
 
 test('place stops on a data table in another project and names the copy command', async () => {

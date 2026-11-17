@@ -28,15 +28,14 @@ run() { if [ "$DRY" = 1 ]; then echo "  would: $*"; else "$@"; fi; }
 echo "== node"
 if command -v node >/dev/null 2>&1; then
   V="$(node --version | sed 's/^v//')"; MAJ="${V%%.*}"
-  if [ "$MAJ" -ge 20 ] 2>/dev/null; then echo "  node $V"
-  else echo "  node $V is too old. Install Node 20+ and re-run." >&2; exit 2; fi
-  # isolated-vm (via @n8n/expression-runtime) ships prebuilds for Node 24; older lines compile it.
-  if [ "$MAJ" -lt 24 ] 2>/dev/null; then
-    echo "  node $V: npm ci compiles isolated-vm from source (needs a C++ toolchain: Xcode CLT or build-essential, plus Python)."
-    echo "  Node 24 installs the prebuilt binary instead."
+  # Node 24 is the floor: isolated-vm (via @n8n/expression-runtime) ships prebuilds for that line only.
+  if [ "$MAJ" -ge 24 ] 2>/dev/null; then echo "  node $V"
+  else
+    echo "  node $V is below the floor. Install Node 24 and re-run (npm ci would compile isolated-vm from source on this line)." >&2
+    exit 2
   fi
 else
-  echo "  node not found. Install Node 20+ and re-run." >&2; exit 2
+  echo "  node not found. Install Node 24 and re-run." >&2; exit 2
 fi
 
 echo "== script permissions"

@@ -70,6 +70,32 @@ than one silently overwriting the other.
 Run it and **commit** before every change. Uncommitted, it is not a rollback
 point.
 
+An instance that answers but holds no workflows is a clean result: exit 0 and
+`0 workflows on <url>: nothing to export`, with `workflows/<env>/` left as it
+is. An instance that does not answer, or rejects the key, is still exit 2 with
+the HTTP status or the network cause.
+
+## `deploy` — one workflow to one instance
+
+```bash
+./scripts/deploy.sh workflows/dev/order-intake.json            # dev
+./scripts/deploy.sh workflows/dev/order-intake.json dev --dry-run
+./scripts/deploy.sh workflows/prod/order-intake.json prod --confirm
+```
+
+The public-API path for an instance that has no promotion mechanism (community
+edition, or a dev box). In order: `validate` and `lint-workflow
+--require-tags --require-placement` on the file (a file that cannot promote
+does not reach the instance either); the live workflow is found by the id in
+the file, else by name (two live workflows with that name is a stop); it is
+created when missing, with the new id written back into the file; placement
+runs with the update body (transfer, folder, tags, as `organize place` does);
+then the workflow is read back and its nodes, connections, settings and tags
+are compared with the file, ignoring canvas positions. A mismatch is exit 1.
+Nothing is activated. Any environment other than dev needs its own
+`N8N_API_URL_<ENV>` pair and `--confirm`, and the guard asks before it runs.
+`--allow-host <host>` passes through to the lint.
+
 ## `validate`
 
 ```bash
@@ -151,6 +177,15 @@ its rows and archives the original, because tables have no transfer endpoint;
 rebind the node ids it prints. Every command writes, so a named environment
 needs its own `N8N_API_URL_<ENV>` pair; there is no fallback to the bare one.
 The rule and the API detail: the `n8n-project-organization` skill.
+
+Folders are a licensed feature. On an instance that answers 403 or 404 on the
+folder routes (community edition), `place` records that once per instance
+(a day, in the OS temp directory; `N8N_HARNESS_CACHE_DIR` moves it) and says it
+once. By default it then stops and names the decision; with
+`N8N_PLACEMENT_FOLDERS=skip` in `.env` it places tags only and reports
+`folder ... (skipped: no folder support on this instance)`. Where folders exist
+the variable changes nothing: the folder stays required. `audit` tolerates a
+403 on `/projects` the same way and audits tags and credentials.
 
 ## `secret-map` — credentials from the secret manager
 
@@ -309,7 +344,8 @@ Convenience wrappers, for anyone who reaches for npm first:
 | `npm run setup` | `./setup.sh` |
 | `npm run verify` | `./scripts/verify-setup.sh` |
 | `npm run smoke` | the MCP handshake |
-| `npm test` | toolkit, instance, organize, secret-map and guard tests |
+| `npm test` | toolkit, instance, organize, deploy, secret-map and guard tests |
+| `npm run deploy -- <file> [env]` | `deploy.mjs` |
 | `npm run lint` | `lint-workflow.mjs --require-tags --require-placement` |
 | `npm run organize` | `organize.mjs audit` |
 | `npm run secrets:verify` | `secret-map.mjs verify` |
@@ -326,8 +362,8 @@ npm test
 ```
 
 `tools.test.mjs` covers the normaliser, diff, lint and inventory logic;
-`guard.test.mjs` the hook contract. `instance.test.mjs`, `organize.test.mjs`
-and `secret-map.test.mjs` run the real HTTP paths against a fake n8n API server
+`guard.test.mjs` the hook contract. `instance.test.mjs`, `organize.test.mjs`,
+`deploy.test.mjs` and `secret-map.test.mjs` run the real HTTP paths against a fake n8n API server
 (workflows, executions, projects, folders, tags, credentials, data tables and
 the transfer endpoints), so the instance-touching tools are covered offline
 with no instance involved. `secret-map.test.mjs` also puts a fake `infisical`

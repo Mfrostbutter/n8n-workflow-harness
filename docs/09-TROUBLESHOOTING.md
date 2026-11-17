@@ -159,8 +159,22 @@ export NODE_EXTRA_CA_CERTS=/path/to/corp-ca.pem  # the CA bundle, PEM, from your
 
 PowerShell: `$env:NODE_USE_ENV_PROXY='1'; $env:NODE_EXTRA_CA_CERTS='C:\path\corp-ca.pem'`.
 
+When the CA (corporate or the self-signed one on a dev instance) is already in
+the operating system's trust store, `NODE_USE_SYSTEM_CA=1` makes Node use that
+store instead of a bundle file: the Windows certificate store, the macOS
+keychain, or the OpenSSL directory on Linux and in WSL. Both variables are
+process-start variables: Node reads them once, before any code runs, so they
+have to be in the environment of the shell that launches the editor or the
+script. Setting them inside a running session, or in a tool call, changes
+nothing for that process.
+
+```bash
+export NODE_USE_SYSTEM_CA=1                    # Node 24 (the floor) supports it
+```
+
 Never `NODE_TLS_REJECT_UNAUTHORIZED=0`. It disables certificate checks for the
-whole process, Node prints a warning, and `doctor` fails on it.
+whole process, Node prints a warning, and `doctor` fails on it and names both
+alternatives.
 
 `doctor` reports which proxy and CA variables are set (names and lengths
 only), notes a proxy variable that `fetch` is ignoring, and on an unreachable
@@ -256,10 +270,32 @@ Resolve by deciding which side is authoritative, then either re-export
 (`export-all` + commit) or redeploy from the repo. Do not just re-export to
 silence it: that adopts an unreviewed change as your baseline.
 
-## `export-all`: "no workflows returned"
+## `export-all`: "0 workflows ... nothing to export"
 
-Either the instance genuinely has none, the URL is wrong, the key is rejected,
-or the public API is off. `./scripts/doctor.sh` distinguishes these.
+The instance answered, the key works, and it holds no workflows. Exit 0, not
+an error: there is nothing to snapshot and nothing to commit, so skip the
+baseline commit and start building. A wrong URL, a rejected key or a disabled
+public API is exit 2 with the cause; `./scripts/doctor.sh` distinguishes
+these.
+
+## WSL: VS Code with the Claude Code extension ignores `.env` changes
+
+Reported on 2026-11-13 by a team running Claude Code in WSL with VS Code on
+Windows attached to it; not reproduced by the maintainers yet. The extension
+runs inside the VS Code Server in WSL and uses the environment that server
+started with. `set -a; . ./.env; set +a` in a WSL terminal changes that shell
+only, so an edited `.env` (a new key, `NODE_EXTRA_CA_CERTS`) does not reach
+the extension or the MCP servers it launches.
+
+- Finish the WSL side first: Node 24, `./setup.sh`, `.env`, the CA file
+  imported into WSL and named in `NODE_EXTRA_CA_CERTS` (or
+  `NODE_USE_SYSTEM_CA=1`), and `./scripts/doctor.sh` passing from a WSL shell.
+  Install the VS Code extension after that.
+- After a later `.env` change, restart the VS Code Server so it starts with
+  the new values: close VS Code, `wsl --shutdown` from Windows, reopen. The
+  reporting team reinstalled the extension to the same effect.
+- The CLI is unaffected: `set -a; . ./.env; set +a; claude` in a WSL shell
+  reads the file every launch.
 
 ## `node --test tests/` fails with MODULE_NOT_FOUND
 
@@ -276,7 +312,7 @@ Current Node resolves a bare directory as a module.
 - Confirm it is installed and matches the pin: `./scripts/verify-setup.sh`.
 - Run the launcher directly: `node scripts/mcp-server.mjs`. It prints the path
   it searched.
-- Node must be 20+. `node --version`.
+- Node must be 24. `node --version`.
 - A partial install (interrupted `npm ci`) can leave the package without its
   node database. `verify-setup` checks for `data/nodes.db` specifically;
   reinstall with `npm ci` if it is missing.

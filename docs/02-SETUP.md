@@ -8,7 +8,7 @@ The full path, with the reasoning. For the fast version see
 
 | Need | Why | Check |
 |---|---|---|
-| Node 20+ and npm (24 recommended, required on Windows without build tools) | The n8n-mcp servers, the CLI and the whole toolkit. `isolated-vm` (via `@n8n/expression-runtime`) ships prebuilt binaries for Node 24; on older lines `npm ci` compiles it and needs a C++ toolchain | `node --version` |
+| Node 24 and npm | The n8n-mcp servers, the CLI and the whole toolkit. `isolated-vm` (via `@n8n/expression-runtime`) ships prebuilt binaries for Node 24 only; on an older line `npm ci` compiles it and needs a C++ toolchain, which is why 24 is the floor | `node --version` |
 | Git | Rollback. Without it there is no undo | `git --version` |
 | Claude Code | The harness itself | `claude --version` |
 | n8n instance, public API on | Anything that touches a workflow | Settings → n8n API |
@@ -103,11 +103,15 @@ Export these alongside `.env` before launching, in every editor:
 ```bash
 export NODE_USE_ENV_PROXY=1                      # Node's fetch follows HTTPS_PROXY / NO_PROXY
 export NODE_EXTRA_CA_CERTS=/path/to/corp-ca.pem    # CA bundle if TLS is inspected
+export NODE_USE_SYSTEM_CA=1                      # or: trust what the OS trust store trusts
 ```
 
 The MCP server follows the proxy variables on its own; the toolkit needs the
-first line, and both need the second when the instance certificate is
-re-signed on the way. Not `NODE_TLS_REJECT_UNAUTHORIZED=0`. The full picture
+first line, and both need a CA line when the instance certificate is
+re-signed on the way or self-signed: the bundle file, or `NODE_USE_SYSTEM_CA=1`
+when the CA is already installed in the OS store. All three are read when Node
+starts, so they must be in the environment before the editor launches. Not
+`NODE_TLS_REJECT_UNAUTHORIZED=0`. The full picture
 is in [09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#behind-a-corporate-proxy-or-tls-inspection).
 
 ### Private instance addresses
@@ -176,6 +180,9 @@ git add -A && git commit -m "baseline: instance state before any change"
 
 Do this **before** the first change, not after. A snapshot taken while the repo
 and the instance already disagreed is not a rollback point.
+
+On an empty instance `export-all` prints `0 workflows ... nothing to export`
+and exits 0. There is nothing to commit; skip the commit and go on.
 
 ## 7. Prove the loop end to end
 

@@ -173,13 +173,19 @@ Four things differ:
    `$CLAUDE_PROJECT_DIR`. The Copilot hook file uses the `command` key, which
    Copilot runs through PowerShell on Windows.
 3. **Proxy and TLS inspection.** `NODE_USE_ENV_PROXY=1` for the toolkit,
-   `NODE_EXTRA_CA_CERTS=<ca.pem>` for everything, set in the PowerShell
+   `NODE_EXTRA_CA_CERTS=<ca.pem>` (or `NODE_USE_SYSTEM_CA=1` when the CA is
+   in the Windows certificate store) for everything, set in the PowerShell
    session before `claude`. Details in
    [09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#behind-a-corporate-proxy-or-tls-inspection).
 4. **Exit codes.** The toolkit never calls `process.exit()` after a request;
    on Windows that fast-fails with a libuv assertion (exit `3221226505`). If
    you add a script, use `process.exitCode` or `fail()` from `lib.mjs`. The
    test suite runs on `windows-latest` in CI to keep it that way.
+
+WSL is the Linux path, not this one: run `./setup.sh` inside the distribution
+and use the `.sh` wrappers. VS Code on Windows attached to WSL has one trap
+with `.env`, described in
+[09-TROUBLESHOOTING.md](09-TROUBLESHOOTING.md#wsl-vs-code-with-the-claude-code-extension-ignores-env-changes).
 
 Launch:
 

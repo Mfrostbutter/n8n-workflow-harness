@@ -1,6 +1,6 @@
 # Quickstart
 
-Fifteen minutes from clone to a verified build loop. You need Node 20+, git,
+Fifteen minutes from clone to a verified build loop. You need Node 24, git,
 Claude Code, and an n8n **dev** instance with the public API enabled.
 
 ## 1. Clone and wire up

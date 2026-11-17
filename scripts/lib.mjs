@@ -1,11 +1,39 @@
 // Shared helpers for the care-kit scripts. Node built-ins only, no packages.
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 export const KIT_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
+
+// Per-instance facts the toolkit learned (folder support, so far). Keyed by
+// instance URL, kept in the OS temp dir, one day old at most. N8N_HARNESS_CACHE_DIR overrides the directory.
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const cacheFile = (url) => {
+  const dir = process.env.N8N_HARNESS_CACHE_DIR || join(tmpdir(), 'n8n-harness');
+  const key = createHash('sha256').update(String(url).replace(/\/+$/, '')).digest('hex').slice(0, 16);
+  return join(dir, `instance-${key}.json`);
+};
+
+/** Cached facts for an instance URL, or {} when nothing fresh is known. */
+export function instanceCache(url) {
+  try {
+    const c = JSON.parse(readFileSync(cacheFile(url), 'utf8'));
+    return Date.now() - Number(c.at ?? 0) < CACHE_TTL_MS ? c : {};
+  } catch { return {}; }
+}
+
+/** Merges facts into the instance cache. Never throws: a cache that cannot be written only costs a repeat. */
+export function rememberInstance(url, facts) {
+  try {
+    const f = cacheFile(url);
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, JSON.stringify({ ...instanceCache(url), ...facts, at: Date.now() }));
+  } catch { /* fail open */ }
+}
 
 /** Loads .env into process.env without overwriting existing values. A blank value (`KEY=`) is "not set". */
 export function loadEnv() {
@@ -35,7 +63,7 @@ export function classifyNetworkError(error = '', env = process.env) {
   const e = String(error);
   const proxyVar = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].find((k) => env[k]);
   if (/CERT|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO|certificate/i.test(e)) {
-    return 'TLS: Node does not trust the certificate the instance (or a TLS-inspecting proxy) presents. Put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem>. Never NODE_TLS_REJECT_UNAUTHORIZED=0.';
+    return 'TLS: Node does not trust the certificate the instance (or a TLS-inspecting proxy) presents. Put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem>, or set NODE_USE_SYSTEM_CA=1 when the CA is already in the OS trust store; both are read at process start, not from inside. Never NODE_TLS_REJECT_UNAUTHORIZED=0.';
   }
   if (proxyVar && !env.NODE_USE_ENV_PROXY) {
     return `${proxyVar} is set but Node's fetch ignores it. Set NODE_USE_ENV_PROXY=1 (Node 22.21+ / 24.5+); NO_PROXY lists hosts that must stay direct.`;

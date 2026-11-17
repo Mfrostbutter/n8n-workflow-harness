@@ -27,8 +27,8 @@ async function main() {
   // --- 1. Runtime
   console.log('runtime');
   const major = Number(process.versions.node.split('.')[0]);
-  if (major >= 18) ok(`node ${process.versions.node}`);
-  else bad(`node ${process.versions.node} is too old`, 'these tools need Node 18+ (fetch, top-level await)');
+  if (major >= 24) ok(`node ${process.versions.node}`);
+  else bad(`node ${process.versions.node} is below the floor`, 'the harness needs Node 24: isolated-vm (via @n8n/expression-runtime) ships prebuilt binaries for that line only');
 
   // --- 2. Environment
   console.log('\nenvironment');
@@ -51,8 +51,9 @@ async function main() {
   if (pxNames.length) ok(`proxy/TLS variables: ${pxNames.map((k) => `${k} (${px[k]} chars)`).join(', ')}`);
   else ok('no proxy or CA variables set (direct connection)');
   if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
-    bad('NODE_TLS_REJECT_UNAUTHORIZED=0 turns off certificate checks for the whole process', 'remove it; put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem> instead');
+    bad('NODE_TLS_REJECT_UNAUTHORIZED=0 turns off certificate checks for the whole process', 'remove it; put the CA bundle in NODE_EXTRA_CA_CERTS=<file.pem>, or set NODE_USE_SYSTEM_CA=1 when the CA is in the OS trust store (both before Node starts)');
   }
+  if (process.env.NODE_USE_SYSTEM_CA === '1') ok('NODE_USE_SYSTEM_CA=1: certificates in the OS trust store are accepted');
   const proxyVar = pxNames.find((k) => /^https?_proxy$/i.test(k));
   if (proxyVar && !process.env.NODE_USE_ENV_PROXY) {
     note(`${proxyVar} is set but the toolkit's fetch ignores it until NODE_USE_ENV_PROXY=1 (the MCP server follows it on its own)`);
@@ -83,8 +84,10 @@ async function main() {
   }
 
   const probe = await api(target, '/workflows?limit=1', { timeoutMs: 15000 });
+  // A reachable instance with no workflows has nothing to export.
+  const emptyInstance = probe.status === 200 && Array.isArray(probe.body?.data) && probe.body.data.length === 0;
   if (probe.status === 200) {
-    ok('reachable and authenticated');
+    ok(emptyInstance ? 'reachable and authenticated (0 workflows)' : 'reachable and authenticated');
   } else if (probe.status === 0) {
     bad(`unreachable (${probe.error ?? 'no response'})`, classifyNetworkError(probe.error));
   } else if (probe.status === 401 || probe.status === 403) {
@@ -114,7 +117,10 @@ async function main() {
   if (existsSync(wfDir)) {
     const n = readdirSync(wfDir).filter((f) => f.endsWith('.json')).length;
     if (n > 0) ok(`workflows/${envName}/ has ${n} exported workflow${n === 1 ? '' : 's'}`);
+    else if (emptyInstance) ok(`workflows/${envName}/ is empty and so is the instance: nothing to snapshot yet`);
     else note(`workflows/${envName}/ is empty. Run export-all to create a rollback point.`);
+  } else if (emptyInstance) {
+    ok(`no workflows/${envName}/ directory and no workflows on the instance: nothing to snapshot yet`);
   } else {
     note(`no workflows/${envName}/ directory yet. Run export-all.`);
   }
