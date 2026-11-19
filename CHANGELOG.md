@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-19
+
+- Tested on n8n 2.48.6 with `@n8n/cli` 0.27.0: `package export` works for a
+  workflow and a project, the promotion routes answer. The API scopes for
+  promotions are `promotions:*`, not `gitConnection:*` as the skill said; a
+  key without them gets `403 Forbidden`. Skill, reference and
+  troubleshooting corrected.
+
 ## 2026-11-17
 
 - **`@n8n/cli` pin moves from 0.24.0 to 0.27.0**, the npm `latest` tag (1.x

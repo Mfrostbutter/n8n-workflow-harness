@@ -289,6 +289,7 @@ Measured:
 |---|---|---|
 | n8n 2.35.5 | 0.14.0, 0.15.0 | 0.16.0 through 0.27.0 |
 | n8n 2.44.6 | 0.23.0 through 1.2.1 | 0.22.0 |
+| n8n 2.48.6 | 0.27.0 | not tested |
 
 Find the release the instance accepts and pin it for that engagement:
 
@@ -300,7 +301,9 @@ Flag names differ by release (`--missingWorkflowDependencyPolicy` before
 0.23.0, `--dependencyPolicy` after); read `--help` at the version you run.
 `promotion-provider` and `promotion-environment` answering 404 means the
 instance predates promotions (n8n 2.40), is unlicensed, or is older than the
-CLI's promotion model.
+CLI's promotion model. `403 Forbidden` means the API key has no
+`promotions:*` scopes: a key keeps the scopes it was created with, so create
+a new one after the instance gains the feature.
 
 ## WSL: VS Code with the Claude Code extension ignores `.env` changes
 

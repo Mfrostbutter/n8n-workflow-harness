@@ -46,9 +46,14 @@ is that mismatch, not a bad workflow. Measured 2026-11-16 and 2026-11-17:
 |---|---|---|
 | n8n 2.35.5 | 0.14.0, 0.15.0 | 0.16.0 through 0.27.0 |
 | n8n 2.44.6 | 0.23.0 through 1.2.1 | 0.22.0 |
+| n8n 2.48.6 | 0.27.0 | not tested |
 
 `promotion-provider` and `promotion-environment` answer 404 on n8n 2.35.5
-(promotions arrive in 2.40). So 0.27.0 is the harness default for a current
+(promotions arrive in 2.40). On n8n 2.48.6 with 0.27.0 the routes answer,
+`package export` works for a workflow and for a project, and a key without
+the `promotions:*` scopes gets `403 Forbidden` on every promotion command:
+an API key keeps the scopes it was created with, so a key older than the
+feature needs replacing. So 0.27.0 is the harness default for a current
 instance, and an engagement pins the release that its own instance accepts:
 try `npx @n8n/cli@<version> package export -w <id>` on dev, write the version
 that works into the engagement `CLAUDE.md`, and move it with every n8n
@@ -126,7 +131,7 @@ The CI templates in the engagement scaffold run 2 to 4 on every push.
 ## Promotion environments, end to end
 
 Prerequisites: licensed instance with the promotions module; an API key whose
-scopes include `gitConnection:*` (plus `variable:list` for promote when
+scopes include `promotions:*` (plus `variable:list` for promote when
 workflows reference variables); a Git repository the customer owns; the CLI
 pinned in the engagement (`npm i --save-exact @n8n/cli@0.27.0`) or run as
 `npx @n8n/cli@0.27.0`. Configure with `N8N_URL` and `N8N_API_KEY` from the
@@ -297,7 +302,7 @@ export-all (target) + commit        # rollback point
 ```
 
 Secrets in CI: `N8N_URL` and `N8N_API_KEY` per instance as masked variables.
-The promotion API key is powerful (`gitConnection:*` plus whatever else it
+The promotion API key is powerful (`promotions:*` plus whatever else it
 carries); scope it to the project where the instance supports it, rotate it on
 team change, and never reuse the dev key on prod.
 
