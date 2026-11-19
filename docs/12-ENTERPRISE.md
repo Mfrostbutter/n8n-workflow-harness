@@ -11,7 +11,7 @@ one of three paths, in order of preference:
 
 | Path | Needs | Skill |
 |---|---|---|
-| n8n Promotions (`npx n8n-cli promotion-connection ...`) | n8n ≥ 2.40, licensed, a Git provider registered on the instance | `n8n-promotion-pipeline` |
+| n8n Promotions (`npx n8n-cli promotion-environment ...`) | n8n ≥ 2.40, licensed, a Git provider registered on the instance | `n8n-promotion-pipeline` |
 | Environments / source control (`npx n8n-cli source-control pull` on the target) | Enterprise license, one branch per environment | `n8n-enterprise-delivery` |
 | Export, lint, deploy (`export-all`, `lint-workflow`, `./scripts/deploy.sh <file> prod --confirm`) | Public API on both instances | `n8n-promotion-pipeline` |
 

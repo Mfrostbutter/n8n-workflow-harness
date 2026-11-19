@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-11-17
+
+- **`@n8n/cli` pin moves from 0.24.0 to 0.27.0**, the npm `latest` tag (1.x
+  is tagged `rc`). The `n8n-promotion-pipeline` skill and its
+  `CLI_REFERENCE.md` are rewritten from `--help` at the pin: the
+  `promotion-connection` topic is `promotion-environment`, one environment
+  per direction (`create`, `connect`, `update` with `settings`) replaces a
+  connection with two configs (`clone`, `set-config`), `--expectedConfigId`
+  is `--expectedEnvironmentId`, and the package import flags are
+  `--conflictPolicy`, `--publishingPolicy`, `--idPolicy`. New at the pin:
+  `list-missing-projects`, `create-missing-projects`, GitLab
+  `list-repositories` and `list-branches`, `--credentialConflictPolicy`,
+  Agents in packages. The promotion commands are documented from the CLI's
+  help and bundled skill, not from a run against a licensed instance.
+- **The CLI has to match the instance, in both directions.** Tested against
+  n8n 2.35.5: `package export` works with 0.14.0 and 0.15.0 and fails with
+  0.16.0 through 0.27.0 (`request/body must NOT have additional properties`),
+  the same error 0.22.0 gives against 2.44.6. The promotion routes are 404
+  there. The skill and a new troubleshooting entry carry the table and say to
+  pin per engagement; 0.27.0 is the default for a current instance.
+- **The guard matches `npx @n8n/cli[@version] ...`** as well as `n8n-cli ...`.
+  The skill recommended the first spelling and the guard only saw the second,
+  so a promotion apply typed that way was not asked about.
+- **`npx n8n-cli` without `npm ci` downloads an unrelated package.** The bare
+  npm name `n8n-cli` belongs to a third party. The skill, the reference and
+  the maintenance page now say to run it after `npm ci` or as
+  `npx @n8n/cli@<pin>`.
+
 ## 2026-11-16
 
 Four reports from a team running the harness on Claude Code in WSL against

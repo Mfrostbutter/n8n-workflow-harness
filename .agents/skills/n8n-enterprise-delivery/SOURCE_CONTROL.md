@@ -75,16 +75,16 @@ only if the customer's git host rejects ed25519.
 ## Promotions versus source control (added 2026-10-19)
 
 Promotions (n8n 2.40, licensed, `n8n-cli promotion-provider` and
-`promotion-connection`) reuse the Git-repository idea but change four things:
+`promotion-environment`; `promotion-connection` up to `@n8n/cli` 0.24) reuse the Git-repository idea but change four things:
 
-1. **Scope.** A connection is `instance`-wide or `projects`-scoped, and a
-   project links to exactly one connection. That is the per-project git
-   isolation source control never had.
+1. **Scope.** An environment is `instance`-wide or `projects`-scoped, and a
+   project links to one environment per direction. That is the per-project
+   git isolation source control never had.
 2. **Direction is explicit.** `promote` exports and pushes; `apply` resets the
-   checkout to the branch tip and imports. Each direction is cloned separately
-   on the instance that uses it.
+   checkout to the branch tip and imports. Each direction is its own
+   environment, created and connected on the instance that uses it.
 3. **The apply is reviewable.** `list-changes <projectId> apply` returns the
-   commit SHA; `apply --expected-config-id --expected-branch
+   commit SHA; `apply --expected-environment-id --expected-branch
    --expected-commit-sha` imports only that commit. Exit 3 means the branch
    moved since the review; exit 4 means preflight found missing credential or
    variable bindings, access requirements, or conflicts. Nothing is imported

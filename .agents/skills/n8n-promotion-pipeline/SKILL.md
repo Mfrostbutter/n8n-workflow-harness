@@ -2,11 +2,11 @@
 name: n8n-promotion-pipeline
 description: >-
   Move n8n workflows between environments the supported way: the official
-  @n8n/cli promotion connections (provider, connection, clone, promote,
-  list-changes, reviewed-commit apply), .n8np package export and import with
+  @n8n/cli promotion environments (provider, one environment per direction,
+  connect, promote, list-changes, reviewed-commit apply), .n8np package export and import with
   conflict and binding policies, source-control pull, and the gates that run
   before any of them. Use when the task is to promote dev to staging or prod,
-  set up a promotion connection or Git provider, review what differs between a
+  set up a promotion environment or Git provider, review what differs between a
   project and its branch, apply a reviewed commit, export or import a package,
   wire credential or data-table bindings across instances, build a CI promotion
   job, or decide between native promotion, source-control environments, package
@@ -16,10 +16,44 @@ description: >-
 
 # n8n promotion pipeline
 
-Written 2026-10-19 from `@n8n/cli` 0.22.0, re-checked 2026-11-16 against 0.24.0, the pin (`n8n-cli --help` and the skill the
-package ships). The CLI is official (`github.com/n8n-io/n8n`, package
-`@n8n/cli`). Re-check the command surface with `npx @n8n/cli@<pin> --help`
-when the pin moves; this file is a cache of that output, not the source.
+Rewritten 2026-11-17 from `@n8n/cli` 0.27.0, the pin and the npm `latest`
+tag (`n8n-cli --help` and the skill the package ships). The 1.x line is
+tagged `rc`; the pin stays on `latest`. The CLI is official
+(`github.com/n8n-io/n8n`, package `@n8n/cli`). Re-check the command surface
+with `npx @n8n/cli@<pin> --help` when the pin moves; this file is a cache of
+that output, not the source.
+
+Run the CLI as `npx n8n-cli` only after `npm ci`, or as `npx @n8n/cli@0.27.0`.
+The bare name `n8n-cli` on the npm registry is an unrelated third-party
+package, and `npx n8n-cli` downloads it when the pinned one is not installed.
+
+**Model change at 0.25.0.** Up to 0.24.0 a promotion *connection* held both
+directions as `configs.promote` and `configs.apply`, each cloned with
+`clone <id> <direction>`. From 0.25.0 a promotion *environment* is one
+direction on one repository, created and connected on its own; the topic is
+`promotion-environment`, `clone` is `connect`, `set-config` is `update` with
+`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. The
+promotion commands below are written from the CLI's help, not from a run
+against a licensed instance.
+
+**The CLI version has to match the instance.** The package and promotion
+request bodies are strict and change between releases, in both directions: a
+CLI newer than the instance fails the same way as one that is older.
+`package export` answering `request/body must NOT have additional properties`
+is that mismatch, not a bad workflow. Measured 2026-11-16 and 2026-11-17:
+
+| Instance | `package export` accepted | Rejected |
+|---|---|---|
+| n8n 2.35.5 | 0.14.0, 0.15.0 | 0.16.0 through 0.27.0 |
+| n8n 2.44.6 | 0.23.0 through 1.2.1 | 0.22.0 |
+
+`promotion-provider` and `promotion-environment` answer 404 on n8n 2.35.5
+(promotions arrive in 2.40). So 0.27.0 is the harness default for a current
+instance, and an engagement pins the release that its own instance accepts:
+try `npx @n8n/cli@<version> package export -w <id>` on dev, write the version
+that works into the engagement `CLAUDE.md`, and move it with every n8n
+upgrade. For a pre-0.25 CLI the promotion topic is `promotion-connection` and
+the flags are the old names (`@n8n/cli@0.24.0 --help`).
 
 The question this skill answers: a workflow works on dev. How does it reach
 production so that a reviewer saw it, the target has what it needs, and
@@ -29,7 +63,7 @@ nothing arrives by hand?
 
 | Mechanism | What it is | Use when |
 |---|---|---|
-| **Promotion connections** (`n8n-cli promotion-*`) | Instance-to-instance through a Git repo. Source instance `promote`s (export, commit, push); target instance `apply`s (reset to branch tip, import). Reviewed-commit apply pins the exact SHA a human reviewed. | Licensed customer with two or more instances and a Git host. The default for an enterprise engagement. |
+| **Promotion environments** (`n8n-cli promotion-*`) | Instance-to-instance through a Git repo. Source instance `promote`s (export, commit, push); target instance `apply`s (reset to branch tip, import). Reviewed-commit apply pins the exact SHA a human reviewed. | Licensed customer with two or more instances and a Git host. The default for an enterprise engagement. |
 | **Source control environments** (Settings > Environments; `n8n-cli source-control pull`) | Each instance bound to a branch. Push from dev, PR between branches, pull on prod. The older feature; still the one with the in-product UI. | Customer already runs it, or wants the editor-side push button. One direction per instance. |
 | **Packages** (`n8n-cli package export|import`, `.n8np`, beta) | A file carrying selected workflows, folders or projects plus stubs, with explicit conflict and binding policies on import. | Air-gapped targets, one-off migrations, moving a demo into a customer tenant, seeding a tenant from a template set. |
 | **Harness deploy** (`./scripts/deploy.sh <file> [env] [--confirm]`, public API) | `validate` and `lint-workflow --require-tags --require-placement` first, then create or update by id or name, placement (transfer, folder, tags), read-back compared with the file. Never activates. | Dev, and community edition instances where none of the above exists. Never the production path on a licensed customer. |
@@ -89,61 +123,74 @@ Run in this order on the source side. All offline, all in `scripts/`.
 
 The CI templates in the engagement scaffold run 2 to 4 on every push.
 
-## Promotion connections, end to end
+## Promotion environments, end to end
 
 Prerequisites: licensed instance with the promotions module; an API key whose
 scopes include `gitConnection:*` (plus `variable:list` for promote when
 workflows reference variables); a Git repository the customer owns; the CLI
-pinned in the engagement (`npm i --save-exact @n8n/cli@0.24.0`) or run as
-`npx @n8n/cli@0.24.0`. Configure with `N8N_URL` and `N8N_API_KEY` from the
+pinned in the engagement (`npm i --save-exact @n8n/cli@0.27.0`) or run as
+`npx @n8n/cli@0.27.0`. Configure with `N8N_URL` and `N8N_API_KEY` from the
 engagement `.env`, never flags on the command line.
 
 ```bash
 # 1. Provider: who may talk to the Git host. SSH returns a deploy key to add.
 echo '{"name":"Customer GitLab","type":"git","auth":{"authType":"ssh-key","keyType":"ed25519"}}' \
   | n8n-cli promotion-provider create --stdin --json > provider.json
+jq -r '.id' provider.json             # providerId for step 2
 jq -r '.publicKey' provider.json      # add as a read-write deploy key
 
-# 2. Connection: which repo, which directions.
-n8n-cli promotion-connection create --file=connection.json
+# 2. One environment per direction, each on the instance that uses it.
+n8n-cli promotion-environment create --file=promote.json   # on the source instance
+n8n-cli promotion-environment create --file=apply.json     # on the target instance
 
-# 3. Clone each direction you will use. Cloning one does not ready the other.
-n8n-cli promotion-connection clone <id> promote     # on the source instance
-n8n-cli promotion-connection clone <id> apply       # on the target instance
+# 3. Connect each environment (for Git: clones its branch). Connecting one does not ready the other.
+n8n-cli promotion-environment connect <promoteId>
+n8n-cli promotion-environment connect <applyId>
 
 # 4. Source side: see what differs, then promote.
-n8n-cli promotion-connection list-changes <projectId> promote
-n8n-cli promotion-connection promote <id> -m "CR-1234: order intake v3"
+n8n-cli promotion-environment list-changes <projectId> promote
+n8n-cli promotion-environment promote <promoteId> -m "CR-1234: order intake v3"
 
 # 5. Target side: review, then apply exactly the reviewed commit.
-n8n-cli promotion-connection list-changes <projectId> apply --sort=updatedAt --order=desc --json > reviewed.json
+n8n-cli promotion-environment list-changes <projectId> apply --sort=updatedAt --order=desc --json > reviewed.json
 jq '{commitSha, changes}' reviewed.json
-n8n-cli promotion-connection apply <id> \
-  --expectedConfigId=$(n8n-cli promotion-connection get <id> --jq '.configs.apply.id') \
-  --expectedBranch=$(n8n-cli promotion-connection get <id> --jq '.configs.apply.settings.branchName') \
+n8n-cli promotion-environment apply <applyId> \
+  --expectedEnvironmentId=<applyId> \
+  --expectedBranch=$(n8n-cli promotion-environment get <applyId> --jq '.settings.branchName') \
   --expectedCommitSha=<full sha from reviewed.json>
 ```
 
-`connection.json` (instance scope; `projects` scope links team projects one
-connection each):
+Take the commit SHA from the same `list-changes` response as the rows; a
+second request can read a newer commit.
+
+`promote.json` (instance scope; a `projects`-scoped environment links team
+projects with `add-project`):
 
 ```json
 {
   "name": "Production",
   "scope": "instance",
   "providerId": "<provider id>",
-  "target": { "schemaVersion": 1, "remoteUrl": "git@gitlab.example.com:ops/n8n-flows.git" },
-  "configs": {
-    "promote": { "settings": { "schemaVersion": 1, "baseBranchName": "main", "createBranchOnPromotion": true } },
-    "apply":   { "settings": { "schemaVersion": 1, "branchName": "main" } }
-  }
+  "remote": { "schemaVersion": 1, "remoteUrl": "git@gitlab.example.com:ops/n8n-flows.git" },
+  "direction": "promote",
+  "settings": { "schemaVersion": 1, "baseBranchName": "main", "createBranchOnPromotion": true }
 }
 ```
+
+`apply.json` is the same with `"direction": "apply"` and
+`"settings": { "schemaVersion": 1, "branchName": "main" }`. The settings must
+match the direction; direction and scope cannot change after the create.
 
 `createBranchOnPromotion: true` is what gives the customer a pull request:
 promote pushes a branch, the PR merges to `main`, prod applies `main`. With
 `false`, promote pushes straight to the base branch and the review gate is
 gone. Required field either way.
+
+A provider of `"type": "gitlab"` (base URL in `config`, access token as
+`auth.password`) can list what its token sees: `promotion-provider
+list-repositories <id>` gives `remoteUrl` and `fullPath`, `list-branches <id>
+<fullPath>` marks the default branch. Read both from there instead of typing
+them.
 
 ### Exit codes that matter
 
@@ -158,8 +205,24 @@ SHA. Check `$?` or the `status` field before reading `counts`.
 
 ### Behaviors to design around
 
-- `promote` exports **all team projects** on an instance-scoped connection.
-  Use a `projects`-scoped connection when teams must promote independently.
+- `promote` exports **all team projects** on an instance-scoped environment.
+  Use a `projects`-scoped environment when teams must promote independently.
+- `-m` is optional on `promote`; without it the commit message is generated.
+  Always pass the change ticket.
+- `promote` refuses a workflow on the branch that moved to a personal
+  project (apply would delete it on the target), and a workflow or folder
+  that moved to another team project while its old project still exists.
+- `apply` moves workflows and folders within their project to match the
+  branch and renames folders to the branch's names. A workflow or folder the
+  branch and the instance hold in different projects is refused before any
+  write.
+- A team project that exists only in the package must exist on the target
+  first: `list-missing-projects <applyId>`, then `create-missing-projects
+  <applyId> [--admin <projectId>=<userId>]` creates it empty with the same
+  id (exit 1 when one fails), then `apply-selection` per project.
+- `apply-continue --confirmDestructiveChanges` also applies data table
+  changes that remove or retype columns and deletes team projects the
+  package does not hold. Never in CI; a human reads the preflight first.
 - `apply` **resets the local checkout to the branch tip and overwrites the
   instance** to match. Workflows on the target that the branch does not
   carry are at risk; `apply-selection` removes instance workflows the project
@@ -168,9 +231,13 @@ SHA. Check `$?` or the `status` field before reading `counts`.
 - `--force` on promote overwrites a diverged remote branch. Not in CI.
 - `authType: token` means HTTP(S) username and password, not a Git host API
   token. `publicKey` is null for a token provider.
-- `set-config` replaces the whole direction configuration; send every setting.
-- A project can be linked to one connection only.
-- A provider cannot be deleted while a connection uses it.
+- `update` with `settings` replaces the whole settings object; send every
+  setting.
+- A project can have one project-scoped environment per direction; a
+  direction without one uses the instance environment.
+- `disconnect <id>` removes the local checkout and keeps the environment.
+- A provider cannot be deleted while an environment uses it, and updating a
+  provider's `auth` replaces the credentials of every environment on it.
 
 ## Packages
 
@@ -181,8 +248,8 @@ n8n-cli package export -p <projectId> -o release-2026-10-19.n8np \
   --dependencyPolicy fail
 
 n8n-cli package import --file release-2026-10-19.n8np -p <targetProjectId> \
-  --workflowConflictPolicy new-version \
-  --workflowPublishingPolicy preserve-published-state \
+  --conflictPolicy new-version \
+  --publishingPolicy preserve-published-state \
   --credentialMatchingMode name-and-type --credentialMissingMode must-preexist \
   --variableMissingMode must-preexist \
   --dataTableMissingMode create --dataTableSchemaConflictPolicy fail \
@@ -195,8 +262,12 @@ workflow that has unpublished changes, so what ships is what runs;
 `must-preexist` for credentials and variables turns a missing value into a
 failed import instead of a workflow that starts and fails later;
 `overwriteDeletionPolicy archive` keeps the archive-not-delete rule.
-`--workflowIdPolicy source` keeps ids stable across instances, which is what
-makes sub-workflow references survive; `new` is the default and re-mints them.
+New workflows always take the package ids (`--idPolicy source` is the only
+value since 0.25.0), which is what makes sub-workflow references survive;
+matched workflows keep their target ids. `--credentialConflictPolicy`
+defaults to `keep-existing`: a matched credential on the target is never
+renamed or rewritten unless the handoff says `overwrite`. Packages also carry
+Agents (`--agentId` on export).
 
 ## Source-control environments
 
@@ -204,7 +275,7 @@ The older model: Settings > Environments binds an instance to a branch, push
 from the editor, `n8n-cli source-control pull` on the target (or the UI).
 Detail, including the no-conflict-detection rule and the one-direction-per-
 instance rule, is in `n8n-enterprise-delivery/SOURCE_CONTROL.md`. Prefer
-promotion connections for a new engagement; they carry reviewed-commit apply
+promotion environments for a new engagement; they carry reviewed-commit apply
 and per-project scope, which environments do not.
 
 ## CI shape
@@ -213,7 +284,7 @@ Source instance, on merge to the promotion branch (or on a schedule):
 
 ```
 export-all (source) -> commit -> validate + lint + wf-diff on the PR
-  -> human review -> promotion-connection promote -m "<ticket>"
+  -> human review -> promotion-environment promote -m "<ticket>"
 ```
 
 Target instance, on approval:
@@ -233,7 +304,7 @@ team change, and never reuse the dev key on prod.
 ## Handoff wording
 
 Under Promotion in the customer's `HANDOFF.md`: the mechanism chosen and why
-the other three were not; the connection name, scope, repo and branches; who
+the other three were not; the environment names and ids per direction, scope, repo and branches; who
 reviews and where (PR, ticket); the exact apply command with the three
 `--expected-*` flags; what exit 3 and exit 4 mean and who acts; the
 environment-setup list (credentials, variables, data table rows) per target;
@@ -242,7 +313,7 @@ and the rollback (`export-all` snapshot plus `apply` of the previous SHA).
 ## Related
 
 - `CLI_REFERENCE.md` in this directory: the command and flag tables for
-  `@n8n/cli` 0.24.0, captured verbatim.
+  `@n8n/cli` 0.27.0.
 - `n8n-enterprise-delivery`: license tiers, RBAC, external secrets, the
   promotion checklist.
 - `n8n-workflow-as-code`: making the diff a reviewer sees readable.

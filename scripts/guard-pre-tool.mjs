@@ -39,16 +39,18 @@ const DENY_ACTIONS = {
   n8n_manage_folders: ['delete'],
   n8n_manage_agents: ['delete'],
 };
+// The official CLI by either spelling: the n8n-cli binary, or npx @n8n/cli[@version].
+const CLI = String.raw`(?:\bn8n-cli|@n8n\/cli(?:@[\w.-]+)?)`;
 const DENY_CMD = [
-  [/\bn8n-cli\s+(workflow|credential|project|data-table|tag|variable)\s+delete\b/, ARCHIVE],
+  [new RegExp(`${CLI}\\s+(workflow|credential|project|data-table|tag|variable)\\s+delete\\b`), ARCHIVE],
   [/\b(docker|podman)\s+(container\s+)?rm\b/, 'Stop the container (docker stop) and rename it; removal is a separate decision.'],
 ];
 const ASK_CMD = [
   [/\b(deploy\.sh|deploy_workflow\.py)\b[^|;&]*\b(prod|production|staging)\b/, 'Deploy to a non-dev environment. The promotion path, not an ad-hoc write, moves changes to staging and prod.'],
   // promotion-connection up to @n8n/cli 0.24; promotion-environment from 0.25 on. Both ask.
-  [/\bn8n-cli\s+promotion-(connection|environment)\s+(promote|apply|apply-continue|promote-selection|apply-selection|apply-selection-continue)\b/, 'A promotion writes to a Git branch or overwrites a target instance. Confirm the reviewed commit and the rollback snapshot exist.'],
-  [/\bn8n-cli\s+source-control\s+pull\b/, 'A source-control pull overwrites local workflows with Git. Confirm export-all ran first.'],
-  [/\bn8n-cli\s+workflow\s+activate\b/, 'Activating over the CLI skips validate-and-verify. Confirm validation and a read-back happened.'],
+  [new RegExp(`${CLI}\\s+promotion-(connection|environment)\\s+(promote|apply|apply-continue|promote-selection|apply-selection|apply-selection-continue|create-missing-projects)\\b`), 'A promotion writes to a Git branch or overwrites a target instance. Confirm the reviewed commit and the rollback snapshot exist.'],
+  [new RegExp(`${CLI}\\s+source-control\\s+pull\\b`), 'A source-control pull overwrites local workflows with Git. Confirm export-all ran first.'],
+  [new RegExp(`${CLI}\\s+workflow\\s+activate\\b`), 'Activating over the CLI skips validate-and-verify. Confirm validation and a read-back happened.'],
   [/\borganize(\.sh|\.mjs)\s+credentials\b[^|;&]*--force\b/, 'A forced credential transfer takes the credential away from every workflow outside the destination project; they fail at their next run. Confirm the list organize printed without --force.'],
 ];
 const ASK_TOOL_ON_PROD = /(^|__|-)(publish_workflow|n8n_create_workflow|n8n_update_(full|partial)_workflow|n8n_deploy_template|n8n_autofix_workflow|update_workflow|create_workflow_from_code)$/;

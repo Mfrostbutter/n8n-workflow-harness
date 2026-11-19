@@ -70,7 +70,7 @@ the decision table, commands, exit codes and CI shape live in
 
 | Mechanism | Since | Scope | Review gate | Credential and variable remapping |
 |---|---|---|---|---|
-| **Promotions** (`n8n-cli promotion-*`) | 2.40 (2026-09-15), licensed | instance, or one connection per project | reviewed-commit apply (`--expected-commit-sha`, exit 3 on drift, exit 4 on missing bindings) | bindings and matching policies on apply |
+| **Promotions** (`n8n-cli promotion-*`) | 2.40 (2026-09-15), licensed | instance, or one environment per project and direction | reviewed-commit apply (`--expected-commit-sha`, exit 3 on drift, exit 4 on missing bindings) | bindings and matching policies on apply |
 | **Source control environments** | 1.x, Business and Enterprise | one instance, one branch | the git host's PR between branches | none: stubs only, values set per instance |
 | **Packages** (`.n8np`) | 2.27, Preview, API and CLI | selected workflows, folders, projects | none (a file) | `--bindings`, `--credentialMatchingMode`, `--credentialMissingMode` |
 
