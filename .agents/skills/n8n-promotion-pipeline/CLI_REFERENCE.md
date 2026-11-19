@@ -98,7 +98,8 @@ pushes to the configured branch (or a new branch when
 `createBranchOnPromotion` is true). Without `-m` the message is generated.
 Refuses a workflow on the branch that moved to a personal project, or to
 another team project while the old one exists. Requires a connected promote
-environment with instance scope. API scopes: `gitConnection:*`, plus
+environment with instance scope. API scopes: `promotions:*` (`list`, `read`, `create`, `update`, `delete`,
+`connect`, `discover`, `manageProjects`, `promote`, `apply`; n8n 2.48), plus
 `variable:list` when workflows reference variables.
 
 ## skill install

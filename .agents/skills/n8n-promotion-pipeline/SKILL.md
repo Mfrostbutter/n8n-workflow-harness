@@ -32,9 +32,14 @@ directions as `configs.promote` and `configs.apply`, each cloned with
 `clone <id> <direction>`. From 0.25.0 a promotion *environment* is one
 direction on one repository, created and connected on its own; the topic is
 `promotion-environment`, `clone` is `connect`, `set-config` is `update` with
-`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. The
-promotion commands below are written from the CLI's help, not from a run
-against a licensed instance.
+`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. Run
+end to end on a licensed n8n 2.48.6 on 2026-11-19 with a GitHub repository
+over an SSH deploy key: provider `create`, environment `create`, `connect`,
+`get`, `list-changes` in both directions, `promote-selection`,
+`apply-selection` with the three `--expected-*` flags (exit 0, and exit 3 on
+a stale SHA), `add-project`, `remove-project`, `disconnect`. Written from the
+CLI's help only, not run: the full `promote` and `apply`, exit 4 and
+`apply-continue`, `create-missing-projects`, a GitLab provider.
 
 **The CLI version has to match the instance.** The package and promotion
 request bodies are strict and change between releases, in both directions: a
@@ -46,9 +51,14 @@ is that mismatch, not a bad workflow. Measured 2026-11-16 and 2026-11-17:
 |---|---|---|
 | n8n 2.35.5 | 0.14.0, 0.15.0 | 0.16.0 through 0.27.0 |
 | n8n 2.44.6 | 0.23.0 through 1.2.1 | 0.22.0 |
+| n8n 2.48.6 | 0.27.0 | not tested |
 
 `promotion-provider` and `promotion-environment` answer 404 on n8n 2.35.5
-(promotions arrive in 2.40). So 0.27.0 is the harness default for a current
+(promotions arrive in 2.40). On n8n 2.48.6 with 0.27.0 the routes answer,
+`package export` works for a workflow and for a project, and a key without
+the `promotions:*` scopes gets `403 Forbidden` on every promotion command:
+an API key keeps the scopes it was created with, so a key older than the
+feature needs replacing. So 0.27.0 is the harness default for a current
 instance, and an engagement pins the release that its own instance accepts:
 try `npx @n8n/cli@<version> package export -w <id>` on dev, write the version
 that works into the engagement `CLAUDE.md`, and move it with every n8n
@@ -126,7 +136,7 @@ The CI templates in the engagement scaffold run 2 to 4 on every push.
 ## Promotion environments, end to end
 
 Prerequisites: licensed instance with the promotions module; an API key whose
-scopes include `gitConnection:*` (plus `variable:list` for promote when
+scopes include `promotions:*` (plus `variable:list` for promote when
 workflows reference variables); a Git repository the customer owns; the CLI
 pinned in the engagement (`npm i --save-exact @n8n/cli@0.27.0`) or run as
 `npx @n8n/cli@0.27.0`. Configure with `N8N_URL` and `N8N_API_KEY` from the
@@ -161,7 +171,13 @@ n8n-cli promotion-environment apply <applyId> \
 ```
 
 Take the commit SHA from the same `list-changes` response as the rows; a
-second request can read a newer commit.
+second request can read a newer commit. For one project the last two steps
+are `promote-selection <projectId> -w <workflowId> -m "<ticket>"` on the
+source and `apply-selection <projectId> -w <workflowId>` with the same three
+`--expected-*` flags on the target. `list-changes ... apply` reports each
+workflow as `new`, `modified` or absent when it already matches the branch,
+and an apply of a `modified` workflow overwrites the target's copy with the
+branch's.
 
 `promote.json` (instance scope; a `projects`-scoped environment links team
 projects with `add-project`):
@@ -206,7 +222,21 @@ SHA. Check `$?` or the `status` field before reading `counts`.
 ### Behaviors to design around
 
 - `promote` exports **all team projects** on an instance-scoped environment.
-  Use a `projects`-scoped environment when teams must promote independently.
+  On a shared instance that puts every team's workflows in one repository.
+  To promote one project, use `promote-selection <projectId> -w <id>...`
+  against the instance promote environment: only the selected workflows, the
+  folders that hold them and their tags are written.
+- **Promote needs an instance-scoped environment on n8n 2.48.6.** A
+  `projects`-scoped promote environment can be created, linked and connected,
+  and `list-changes` reads through it, but `promote-selection` answers
+  `Promote is only available on an instance environment. Project environments
+  are not supported yet.` A `projects`-scoped **apply** environment works:
+  `apply-selection` imported through one.
+- The repository layout promote writes: `n8n/manifest.json`,
+  `n8n/projects/<name>-<id>/project.json`, folders nested under it as
+  `folders/<name>-<id>/folder.json`, each workflow as
+  `workflows/<slug>-<id>/workflow.json` plus `workflow-metadata.json`, and
+  `n8n/tags/<name>-<id>/tag.json`. That is the path a reviewer sees in the PR.
 - `-m` is optional on `promote`; without it the commit message is generated.
   Always pass the change ticket.
 - `promote` refuses a workflow on the branch that moved to a personal
@@ -297,7 +327,7 @@ export-all (target) + commit        # rollback point
 ```
 
 Secrets in CI: `N8N_URL` and `N8N_API_KEY` per instance as masked variables.
-The promotion API key is powerful (`gitConnection:*` plus whatever else it
+The promotion API key is powerful (`promotions:*` plus whatever else it
 carries); scope it to the project where the instance supports it, rotate it on
 team change, and never reuse the dev key on prod.
 
