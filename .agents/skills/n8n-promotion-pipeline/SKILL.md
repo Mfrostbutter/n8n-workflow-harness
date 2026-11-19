@@ -32,9 +32,14 @@ directions as `configs.promote` and `configs.apply`, each cloned with
 `clone <id> <direction>`. From 0.25.0 a promotion *environment* is one
 direction on one repository, created and connected on its own; the topic is
 `promotion-environment`, `clone` is `connect`, `set-config` is `update` with
-`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. The
-promotion commands below are written from the CLI's help, not from a run
-against a licensed instance.
+`settings`, and `--expectedConfigId` is `--expectedEnvironmentId`. Run
+end to end on a licensed n8n 2.48.6 on 2026-11-19 with a GitHub repository
+over an SSH deploy key: provider `create`, environment `create`, `connect`,
+`get`, `list-changes` in both directions, `promote-selection`,
+`apply-selection` with the three `--expected-*` flags (exit 0, and exit 3 on
+a stale SHA), `add-project`, `remove-project`, `disconnect`. Written from the
+CLI's help only, not run: the full `promote` and `apply`, exit 4 and
+`apply-continue`, `create-missing-projects`, a GitLab provider.
 
 **The CLI version has to match the instance.** The package and promotion
 request bodies are strict and change between releases, in both directions: a
@@ -166,7 +171,13 @@ n8n-cli promotion-environment apply <applyId> \
 ```
 
 Take the commit SHA from the same `list-changes` response as the rows; a
-second request can read a newer commit.
+second request can read a newer commit. For one project the last two steps
+are `promote-selection <projectId> -w <workflowId> -m "<ticket>"` on the
+source and `apply-selection <projectId> -w <workflowId>` with the same three
+`--expected-*` flags on the target. `list-changes ... apply` reports each
+workflow as `new`, `modified` or absent when it already matches the branch,
+and an apply of a `modified` workflow overwrites the target's copy with the
+branch's.
 
 `promote.json` (instance scope; a `projects`-scoped environment links team
 projects with `add-project`):
@@ -211,7 +222,21 @@ SHA. Check `$?` or the `status` field before reading `counts`.
 ### Behaviors to design around
 
 - `promote` exports **all team projects** on an instance-scoped environment.
-  Use a `projects`-scoped environment when teams must promote independently.
+  On a shared instance that puts every team's workflows in one repository.
+  To promote one project, use `promote-selection <projectId> -w <id>...`
+  against the instance promote environment: only the selected workflows, the
+  folders that hold them and their tags are written.
+- **Promote needs an instance-scoped environment on n8n 2.48.6.** A
+  `projects`-scoped promote environment can be created, linked and connected,
+  and `list-changes` reads through it, but `promote-selection` answers
+  `Promote is only available on an instance environment. Project environments
+  are not supported yet.` A `projects`-scoped **apply** environment works:
+  `apply-selection` imported through one.
+- The repository layout promote writes: `n8n/manifest.json`,
+  `n8n/projects/<name>-<id>/project.json`, folders nested under it as
+  `folders/<name>-<id>/folder.json`, each workflow as
+  `workflows/<slug>-<id>/workflow.json` plus `workflow-metadata.json`, and
+  `n8n/tags/<name>-<id>/tag.json`. That is the path a reviewer sees in the PR.
 - `-m` is optional on `promote`; without it the commit message is generated.
   Always pass the change ticket.
 - `promote` refuses a workflow on the branch that moved to a personal

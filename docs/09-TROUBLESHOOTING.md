@@ -304,6 +304,10 @@ instance predates promotions (n8n 2.40), is unlicensed, or is older than the
 CLI's promotion model. `403 Forbidden` means the API key has no
 `promotions:*` scopes: a key keeps the scopes it was created with, so create
 a new one after the instance gains the feature.
+`Promote is only available on an instance environment` means the promote
+environment is `projects`-scoped; on n8n 2.48.6 only an instance-scoped one
+can promote. Use it with `promote-selection <projectId> -w <id>` to push one
+project's workflows.
 
 ## WSL: VS Code with the Claude Code extension ignores `.env` changes
 

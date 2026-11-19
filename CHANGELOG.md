@@ -7,6 +7,14 @@
   promotions are `promotions:*`, not `gitConnection:*` as the skill said; a
   key without them gets `403 Forbidden`. Skill, reference and
   troubleshooting corrected.
+- Promotion round trip run on the same pair against a GitHub repository:
+  provider, two environments, `connect`, `list-changes`, `promote-selection`,
+  `apply-selection` pinned to the reviewed SHA (exit 0, and exit 3 on a stale
+  SHA; the apply restored a changed workflow to the promoted version). A
+  `projects`-scoped promote environment cannot promote on 2.48.6; an
+  instance-scoped one with `promote-selection` does. The skill says which
+  commands were run and which are still from help only, and documents the
+  repository layout. `deploy.sh` create and update also verified there.
 
 ## 2026-11-17
 
